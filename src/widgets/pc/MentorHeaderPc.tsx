@@ -1,5 +1,7 @@
 import { cn } from "@/shared/lib/cn";
 import { HiOutlineBell } from "react-icons/hi";
+import { useState } from "react";
+import NotificationPopup from "@/widgets/notifications/NotificationPopup";
 
 type Props = {
   className?: string;
@@ -11,16 +13,17 @@ type Props = {
 
 export default function MentorHeaderPc({
   className,
-  onClickNotification,
   onClickProfile,
   hasNotificationDot = true,
 }: Props) {
+  const [open, setOpen] = useState(false);
+
   return (
     <header className={cn("flex items-center justify-end gap-4", className)}>
       {/* 알림 */}
       <button
         type="button"
-        onClick={onClickNotification}
+        onClick={() => setOpen(true)}
         className="relative flex items-center justify-center rounded-xl hover:bg-gray-100/70"
         aria-label="알림"
       >
@@ -29,6 +32,11 @@ export default function MentorHeaderPc({
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
         )}
       </button>
+
+      <NotificationPopup
+        open={open}
+        onClose={() => setOpen(false)}
+      />
 
       {/* 프로필 */}
       <button
