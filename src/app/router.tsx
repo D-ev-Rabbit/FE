@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import AuthLayout from "@/layouts/AuthLayout";
 import MentorLayout from "@/layouts/MentorLayout";
@@ -6,25 +6,61 @@ import MenteeLayout from "@/layouts/MenteeLayout";
 
 import LoginPage from "@/pages/auth/LoginPage";
 
+import MentorHomePage from "@/pages/mentor/HomePage";
+import MentorTasksPage from "@/pages/mentor/TasksPage";
+import MentorFeedbackPage from "@/pages/mentor/FeedbackPage";
+import MentorTodoPage from "@/pages/mentor/TodoPage";
+import MentorMenteesPage from "@/pages/mentor/MenteesPage";
+import MentorSettingsPage from "@/pages/mentor/SettingsPage";
 
-import MentorDashboardPage from "@/pages/mentor/DashboardPage";
 import MenteeHomePage from "@/pages/mentee/HomePage";
+import MenteeTasksPage from "@/pages/mentee/TasksPage";
+import MenteeCalendarPage from "@/pages/mentee/CalendarPage";
+import MenteeSettingsPage from "@/pages/mentee/SettingsPage";
+
+import NotFoundPage from "@/pages/notfound/NotFoundPage";
 
 export const router = createBrowserRouter([
+  // 기본 진입
+  { path: "/", element: <Navigate to="/auth/login" replace /> },
+
+  // Auth
   {
+    path: "/auth",
     element: <AuthLayout />,
     children: [
-      { path: "/", element: <LoginPage /> },
+      { path: "login", element: <LoginPage /> }
     ],
   },
+
+  // Mentor (PC)
   {
     path: "/mentor",
     element: <MentorLayout />,
-    children: [{ path: "home", element: <MentorDashboardPage /> }],
+    children: [
+      { index: true, element: <Navigate to="home" replace /> },
+      { path: "home", element: <MentorHomePage /> },
+      { path: "tasks", element: <MentorTasksPage /> },
+      { path: "feedback", element: <MentorFeedbackPage /> },
+      { path: "todo", element: <MentorTodoPage /> },
+      { path: "mentees", element: <MentorMenteesPage /> },
+      { path: "settings", element: <MentorSettingsPage /> },
+    ],
   },
+
+  // Mentee (WebApp)
   {
     path: "/mentee",
     element: <MenteeLayout />,
-    children: [{ path: "home", element: <MenteeHomePage /> }],
+    children: [
+      { index: true, element: <Navigate to="home" replace /> },
+      { path: "home", element: <MenteeHomePage /> },
+      { path: "tasks", element: <MenteeTasksPage /> },
+      { path: "calendar", element: <MenteeCalendarPage /> },
+      { path: "settings", element: <MenteeSettingsPage /> },
+    ],
   },
+
+  // 404
+  { path: "*", element: <NotFoundPage /> },
 ]);

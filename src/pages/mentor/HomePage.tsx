@@ -7,8 +7,7 @@ const mentees = Array.from({ length: 6 }).map((_, i) => ({
   name: "홍길동",
 }));
 
-export default function MentorDashboardPage() {
-  const [open, setOpen] = useState(false);
+export default function MentorHomePage() {
   const [selectedId, setSelectedId] = useState<string>("0");
 
   return (
