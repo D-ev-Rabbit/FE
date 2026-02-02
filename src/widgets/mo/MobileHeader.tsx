@@ -1,5 +1,7 @@
 import { cn } from "@/shared/lib/cn";
 import { HiOutlineBell } from "react-icons/hi";
+import { useState } from "react";
+import NotificationPopup from "@/widgets/notifications/NotificationPopup";
 import { FiUser } from "react-icons/fi";
 
 type Props = {
@@ -13,10 +15,11 @@ type Props = {
 export default function MobileHeader({
   showLogo = true,
   hasNotificationDot = true,
-  onClickNotification,
   onClickProfile,
   className,
 }: Props) {
+  const [open, setOpen] = useState(false);
+  
   return (
     <header className={cn("bg-gray-50 pb-4", className)}>
       <div className="mx-2 mt-6 rounded-3xl bg-white px-5 py-3 shadow-md">
@@ -36,32 +39,39 @@ export default function MobileHeader({
           </div>
 
           {/* Right: actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {/* 알림 */}
             <button
               type="button"
-              onClick={onClickNotification}
-              className="relative flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition"
+              onClick={() => setOpen(true)}
+              className="relative flex items-center justify-center rounded-full bg-transparent transition"
               aria-label="알림"
             >
-              <HiOutlineBell size={16} className="text-gray-800" />
+              <HiOutlineBell size={18} className="text-gray-800" />
               {hasNotificationDot && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                <span className="absolute right-4 top-1.5 h-2 w-2 rounded-full bg-red-500" />
               )}
             </button>
+
+            <NotificationPopup
+              open={open}
+              onClose={() => setOpen(false)}
+            />
 
             {/* 프로필 */}
             <button
               type="button"
               onClick={onClickProfile}
-              className="flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition"
+              className="flex items-center justify-center rounded-full bg-transparent transition"
               aria-label="프로필"
             >
-              <FiUser size={16} className="text-gray-500" />
+              <FiUser size={18} className="text-gray-800" />
             </button>
           </div>
         </div>
       </div>
     </header>
+
+
   );
 }
