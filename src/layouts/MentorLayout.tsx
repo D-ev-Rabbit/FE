@@ -4,23 +4,30 @@ import MentorHeaderPc from "@/widgets/pc/MentorHeaderPc";
 
 export default function MentorLayout() {
   return (
-    <div className="min-h-dvh bg-gray-50">
-      {/* 화면 전체 */}
-      <div className="grid min-h-dvh grid-cols-[288px_1fr] gap-4 p-4">
-        {/* Left */}
-        <MentorSidebarPc />
+    <div className="h-dvh w-full overflow-hidden bg-gray-50">
+      <div className="grid h-full grid-cols-[280px_1fr]">
+        {/* Sidebar: 고정 */}
+        <aside className="h-full overflow-hidden p-6">
+          <MentorSidebarPc />
+        </aside>
 
-        {/* Right */}
-        <div className="min-w-0 flex flex-col">
-          {/* ✅ 헤더: 덮이지 않게 sticky + z 높게 */}
-          <div className="sticky top-0 z-20 flex items-center justify-end pb-3 pr-2">
-            <MentorHeaderPc />
+        {/* Right: header 고정 + content만 스크롤 */}
+        <div className="h-full min-w-0">
+          <div className="grid h-full grid-rows-[auto_1fr]">
+            {/* Header (fixed) */}
+            <header className="shrink-0 p-6 pb-0">
+              <div className="flex justify-end">
+                <MentorHeaderPc />
+              </div>
+            </header>
+
+            {/* Content (scroll only here) */}
+            <main className="min-h-0 overflow-y-auto p-6 pt-4">
+              <div className="min-h-full rounded-3xl bg-white p-8 shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+                <Outlet />
+              </div>
+            </main>
           </div>
-
-          {/* ✅ 본문: 남은 공간을 채우고, 헤더를 절대 덮지 않음 */}
-          <main className="flex-1 min-h-0 rounded-3xl bg-white p-6 shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
-            <Outlet />
-          </main>
         </div>
       </div>
     </div>

@@ -15,10 +15,10 @@ type Item = {
 function LogoMark() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-600 text-white">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-white">
         ✦
       </div>
-      <div className="text-lg font-bold tracking-wide text-violet-600">COURSUE</div>
+      <div className="text-base font-bold tracking-wide text-violet-600">설스터디</div>
     </div>
   );
 }
@@ -33,7 +33,7 @@ const items: Item[] = [
 
 export default function MentorSidebarPc() {
   return (
-    <aside className="flex h-full w-72 flex-col rounded-3xl bg-white p-7 shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
+    <aside className="flex h-full w-64 flex-col rounded-3xl bg-white p-7">
       <LogoMark />
 
       <div className="mt-10 text-xs font-semibold tracking-widest text-gray-400">

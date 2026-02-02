@@ -1,6 +1,5 @@
 import { cn } from "@/shared/lib/cn";
 import { HiOutlineBell } from "react-icons/hi";
-import { LuListTodo } from "react-icons/lu";
 
 type Props = {
   className?: string;
@@ -13,7 +12,6 @@ type Props = {
 export default function MentorHeaderPc({
   className,
   onClickNotification,
-  onClickMenu,
   onClickProfile,
   hasNotificationDot = true,
 }: Props) {
@@ -23,23 +21,13 @@ export default function MentorHeaderPc({
       <button
         type="button"
         onClick={onClickNotification}
-        className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100/70"
+        className="relative flex items-center justify-center rounded-xl hover:bg-gray-100/70"
         aria-label="알림"
       >
         <HiOutlineBell className="h-6 w-6 text-gray-900 hover:text-gray-900" />
         {hasNotificationDot && (
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
         )}
-      </button>
-
-      {/* 메뉴 */}
-      <button
-        type="button"
-        onClick={onClickMenu}
-        className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100/70"
-        aria-label="메뉴"
-      >
-        <LuListTodo className="h-6 w-6 text-gray-700 hover:text-gray-900" />
       </button>
 
       {/* 프로필 */}

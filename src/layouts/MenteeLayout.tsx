@@ -1,17 +1,28 @@
 import { Outlet } from "react-router-dom";
+import AppShell from "@/app/AppShell";
+import MobileHeader from "@/widgets/mo/MobileHeader";
+import MobileBottomNav from "@/widgets/mo/MobileBottomNav";
 
 export default function MenteeLayout() {
   return (
-    <div className="min-h-dvh bg-gray-50">
-      <header className="sticky top-0 border-b bg-white p-4 font-semibold">
-        MO Header
-      </header>
-      <main className="p-4 pb-24">
-        <Outlet />
-      </main>
-      <nav className="fixed bottom-0 left-0 right-0 border-t bg-white p-4">
-        MO Bottom Nav
-      </nav>
-    </div>
+    <AppShell>
+      {/* 헤더/메인/네비 3단 고정 레이아웃 */}
+      <div className="grid h-dvh grid-rows-[auto_1fr_auto]">
+        {/* Top (fixed) */}
+        <div className="shrink-0 bg-gray-50">
+          <MobileHeader />
+        </div>
+
+        {/* Middle (scroll only here) */}
+        <main className="overflow-y-auto px-4 pb-6">
+          <Outlet />
+        </main>
+
+        {/* Bottom (fixed) */}
+        <div className="shrink-0 bg-gray-50">
+          <MobileBottomNav basePath="/mentee" />
+        </div>
+      </div>
+    </AppShell>
   );
 }

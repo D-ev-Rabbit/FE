@@ -5,8 +5,7 @@ import MentorLayout from "@/layouts/MentorLayout";
 import MenteeLayout from "@/layouts/MenteeLayout";
 
 import LoginPage from "@/pages/auth/LoginPage";
-import MentorLoginPage from "@/pages/auth/MentorLoginPage";
-import MenteeLoginPage from "@/pages/auth/MenteeLoginPage";
+
 
 import MentorDashboardPage from "@/pages/mentor/DashboardPage";
 import MenteeHomePage from "@/pages/mentee/HomePage";
@@ -16,8 +15,6 @@ export const router = createBrowserRouter([
     element: <AuthLayout />,
     children: [
       { path: "/", element: <LoginPage /> },
-      { path: "/login/mentor", element: <MentorLoginPage /> },
-      { path: "/login/mentee", element: <MenteeLoginPage /> },
     ],
   },
   {
