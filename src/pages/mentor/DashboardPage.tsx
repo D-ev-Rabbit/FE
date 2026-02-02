@@ -15,7 +15,6 @@ export default function MentorDashboardPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">멘토 대시보드</h1>
-
       <button
         className="h-12 rounded-xl bg-black px-5 text-white"
         onClick={() => setOpen(true)}

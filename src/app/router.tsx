@@ -23,7 +23,7 @@ export const router = createBrowserRouter([
   {
     path: "/mentor",
     element: <MentorLayout />,
-    children: [{ path: "dashboard", element: <MentorDashboardPage /> }],
+    children: [{ path: "home", element: <MentorDashboardPage /> }],
   },
   {
     path: "/mentee",
