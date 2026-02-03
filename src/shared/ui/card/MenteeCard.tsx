@@ -28,15 +28,13 @@ export default function MenteeCard({
       type="button"
       onClick={onClick}
       className={cn(
-        // 공통
         "group relative border bg-white transition",
-        "shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_14px_40px_rgba(0,0,0,0.12)]",
-        selected ? "ring-2 ring-violet-500" : "ring-0",
+        selected
+          ? "border-violet-500 bg-violet-50 shadow-[0_10px_30px_rgba(124,58,237,0.12)]"
+          : "border-gray-200 hover:border-gray-300",
         isMo
-          ? // 모바일 카드(세로 + 중앙정렬 + 가로스크롤용)
-            "w-30 shrink-0 rounded-3xl px-4 py-4 text-center"
-          : // PC 카드(가로, 리스트용)
-            "w-48 shrink-0 rounded-2xl px-5 py-4 text-left",
+          ? "w-30 shrink-0 rounded-3xl px-4 py-4 text-center"
+          : "w-48 shrink-0 rounded-2xl px-5 py-4 text-left",
         className
       )}
     >
