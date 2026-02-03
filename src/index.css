@@ -57,6 +57,27 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* ===== Pin buttons: no square focus/hover outline ===== */
+.btn-none,
+.btn-nonen:hover {
+  border-color: transparent !important;
+}
+
+.btn-none:focus,
+.btn-none:focus-visible {
+  outline: none !important;
+}
+/* pin button background 제거 */
+.btn-none,
+.btn-none:hover,
+.btn-none:active,
+.btn-none:focus,
+.btn-none:focus-visible {
+  background: transparent !important;
+}
+
+
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

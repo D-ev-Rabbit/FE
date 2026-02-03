@@ -1,3 +1,20 @@
+/*  사용법
+import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
+
+  const [open, setOpen] = useState(false);
+
+<ConfirmModal
+  open={open}
+  variant="error"
+  title="실패"
+  description="다시 한번 확인해 주세요."
+  onCancel={() => setOpen(false)}
+  onConfirm={() => setOpen(false)}
+  cancelText="취소"
+  confirmText="확인"
+/>
+*/
+
 import type { ReactNode } from "react";
 import ModalBase from "./ModalBase";
 import { IconCheck, IconError, IconInfo } from "./icons";
