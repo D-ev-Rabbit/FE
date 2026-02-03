@@ -15,7 +15,7 @@ import MentorSettingsPage from "@/pages/mentor/SettingsPage";
 
 import MenteeHomePage from "@/pages/mentee/HomePage";
 import MenteeTasksPage from "@/pages/mentee/TasksPage";
-import MenteeCalendarPage from "@/pages/mentee/CalendarPage";
+import MenteeCalendarPage from "@/pages/mentee/CalendarPage/index";
 import MenteeSettingsPage from "@/pages/mentee/SettingsPage";
 
 import NotFoundPage from "@/pages/notfound/NotFoundPage";
