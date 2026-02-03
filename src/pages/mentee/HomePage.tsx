@@ -1,4 +1,3 @@
-import { useNotify } from "@/shared/ui/notification/NotificationProvider";
 import MenteeCard from "@/shared/ui/card/MenteeCard";
 
 const mentees = Array.from({ length: 6 }).map((_, i) => ({
