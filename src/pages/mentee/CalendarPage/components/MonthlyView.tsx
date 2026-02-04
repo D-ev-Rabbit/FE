@@ -134,61 +134,8 @@ export default function MonthlyView({
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-900">월간 목표</div>
-          <button
-            type="button"
-            onClick={onAddGoal}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-violet-200 bg-violet-50 p-0 text-violet-600 shadow-sm"
-            aria-label="월간 목표 추가"
-          >
-            <HiOutlinePlus className="h-4 w-4 text-violet-600" />
-          </button>
-        </div>
-        <div className="mt-3 space-y-2">
-          {monthGoals.map((goal) => (
-            <div
-              key={goal.id}
-              className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
-            >
-              <button
-                type="button"
-                onClick={() => onToggleGoalDone(goal.id)}
-                className="flex flex-1 items-center gap-2 bg-transparent p-0 text-left text-sm"
-                aria-label={`${goal.title} 완료`}
-              >
-                <span
-                  className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${
-                    goal.done
-                      ? "border-violet-500 bg-violet-500"
-                      : "border-gray-300 bg-white"
-                  }`}
-                >
-                  {goal.done && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                </span>
-                <span
-                  className={goal.done ? "text-gray-400 line-through" : "text-gray-700"}
-                >
-                  {goal.title}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenGoalActions(goal.id)}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 p-0 text-gray-500 shadow-none"
-                aria-label={`${goal.title} 관리`}
-              >
-                <HiOutlineEllipsisHorizontal className="h-4 w-4 text-gray-500" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-2 shadow-md">
         <div className="flex items-center justify-between pt-2 pb-1">
-          <div className="text-sm font-semibold text-gray-900">선택 날짜 플래너</div>
           <div className="text-xs font-semibold text-gray-400">{todayLabel}</div>
         </div>
         {subjects.map((subject, index) => {
