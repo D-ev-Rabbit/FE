@@ -1,6 +1,3 @@
-import type { MenteeRowData } from "../../components/MenteeRow";
-
-
 export const mentees = Array.from({ length: 6 }).map((_, i) => ({
   id: String(i),
   grade: i === 5 ? "고등학교 1학년" : "고등학교 2학년",

@@ -9,7 +9,7 @@ import LoginPage from "@/pages/auth/LoginPage";
 import MentorHomePage from "@/pages/mentor/home/HomePage";
 import MentorTasksPage from "@/pages/mentor/TasksPage";
 import MentorFeedbackPage from "@/pages/mentor/FeedbackPage";
-import MentorTodoPage from "@/pages/mentor/TodoPage";
+import MentorTodoPage from "@/pages/mentor/todo/TodoPage";
 import MentorMenteesPage from "@/pages/mentor/mentees/MenteesPage";
 import MentorSettingsPage from "@/pages/mentor/SettingsPage";
 
