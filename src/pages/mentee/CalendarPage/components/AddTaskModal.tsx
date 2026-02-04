@@ -6,11 +6,6 @@ type AddTaskModalProps = {
   onClose: () => void;
   selectedSubject: string;
   taskDraftText: string;
-  weekdays: string[];
-  selectedWeekdays: string[];
-  repeatMode: "weekly" | "once";
-  onToggleWeekday: (day: string) => void;
-  onSetRepeatMode: (mode: "weekly" | "once") => void;
   onChangeTaskDraftText: (value: string) => void;
   onAddTask: () => void;
 };
@@ -20,11 +15,6 @@ export default function AddTaskModal({
   onClose,
   selectedSubject,
   taskDraftText,
-  weekdays,
-  selectedWeekdays,
-  repeatMode,
-  onToggleWeekday,
-  onSetRepeatMode,
   onChangeTaskDraftText,
   onAddTask,
 }: AddTaskModalProps) {
@@ -59,54 +49,6 @@ export default function AddTaskModal({
               placeholder="할 일을 입력하세요."
             />
           </div>
-
-        <div className="mt-5 space-y-2">
-          <div className="text-sm font-semibold text-gray-700">요일 선택</div>
-          <div className="flex flex-wrap gap-2">
-            {weekdays.map((day) => {
-              const active = selectedWeekdays.includes(day);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => onToggleWeekday(day)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                    active
-                      ? "border-violet-600 bg-violet-600 text-white"
-                      : "border-gray-200 bg-white text-gray-600"
-                  }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() => onSetRepeatMode("weekly")}
-            className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold ${
-              repeatMode === "weekly"
-                ? "bg-violet-600 text-white"
-                : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            매주
-          </button>
-          <button
-            type="button"
-            onClick={() => onSetRepeatMode("once")}
-            className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold ${
-              repeatMode === "once"
-                ? "bg-violet-600 text-white"
-                : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            이번주만
-          </button>
-        </div>
 
         <button
           type="button"
