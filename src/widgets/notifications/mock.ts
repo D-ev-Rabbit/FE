@@ -1,40 +1,7 @@
 import type { Notice } from "./types";
 
 export const mockNotices: Notice[] = [
-  {
-    id: "1",
-    category: "feedback",
-    title: "Selena commented on your post",
-    timeLabel: "20 minutes ago",
-  },
-  {
-    id: "2",
-    category: "task",
-    title: "Well done! Javascript 과제 제출 완료",
-    timeLabel: "Yesterday",
-  },
-  {
-    id: "3",
-    category: "todo",
-    title: "과제가 13시간 지연되었습니다",
-    timeLabel: "25 minutes ago",
-  },
-  {
-    id: "4",
-    category: "feedback",
-    title: "Selena commented on your post",
-    timeLabel: "20 minutes ago",
-  },
-  {
-    id: "5",
-    category: "task",
-    title: "Well done! Javascript 과제 제출 완료",
-    timeLabel: "Yesterday",
-  },
-  {
-    id: "6",
-    category: "system",
-    title: "과제가 13시간 지연되었습니다",
-    timeLabel: "25 minutes ago",
-  }
+  { id: "1", category: "task_feedback", title: "수학 과제 피드백이 달렸어요", timeLabel: "방금 전" },
+  { id: "2", category: "planner_feedback", title: "플래너 피드백이 달렸어요", timeLabel: "10분 전" },
+  { id: "3", category: "task_missing", title: "오늘 과제를 아직 제출하지 않았어요", timeLabel: "1시간 전" },
 ];
