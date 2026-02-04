@@ -6,7 +6,7 @@ import MenteeLayout from "@/layouts/MenteeLayout";
 
 import LoginPage from "@/pages/auth/LoginPage";
 
-import MentorHomePage from "@/pages/mentor/HomePage";
+import MentorHomePage from "@/pages/mentor/home/HomePage";
 import MentorTasksPage from "@/pages/mentor/TasksPage";
 import MentorFeedbackPage from "@/pages/mentor/FeedbackPage";
 import MentorTodoPage from "@/pages/mentor/TodoPage";
