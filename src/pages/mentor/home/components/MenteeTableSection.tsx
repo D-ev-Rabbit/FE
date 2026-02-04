@@ -1,4 +1,4 @@
-import MenteeRow, { type MenteeRowData } from "./MenteeRow";
+import MenteeRow, { type MenteeRowData } from "../../mentees/components/MenteeRow";
 
 interface MenteeTableSectionProps {
   rows: MenteeRowData[];

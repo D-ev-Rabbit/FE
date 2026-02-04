@@ -1,4 +1,4 @@
-import type { MenteeRowData } from "../components/MenteeRow";
+import type { MenteeRowData } from "../../mentees/components/MenteeRow";
 
 
 export const mentees = Array.from({ length: 6 }).map((_, i) => ({
