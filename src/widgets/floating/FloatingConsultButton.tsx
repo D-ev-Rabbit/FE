@@ -29,7 +29,7 @@ export default function FloatingConsultButton({
   return (
     <div
       className={cn(
-        "absolute right-5 bottom-24 z-30",
+        "absolute right-5 bottom-20 z-30",
         "flex items-center mb-2",
         "rounded-full bg-white shadow-lg",
         "border border-violet-200",
