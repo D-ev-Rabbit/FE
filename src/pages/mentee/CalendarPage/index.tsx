@@ -1,12 +1,19 @@
+import { useMemo, useState } from "react";
 import AddTaskModal from "./components/AddTaskModal";
+import DatePickerModal from "./components/DatePickerModal";
 import DailyNoteModal from "./components/DailyNoteModal";
+import DailyRecordPage from "./components/DailyRecordPage";
 import DailyView from "./components/DailyView";
 import MonthlyView from "./components/MonthlyView";
 import TaskActionModal from "./components/TaskActionModal";
 import WeeklyView from "./components/WeeklyView";
 import useCalendarState from "./hooks/useCalendarState";
+import { buildMonthGrid, formatMonthLabel } from "./utils/date";
 
 export default function MenteeCalendarPage() {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
   const {
     currentDate,
     viewMode,
@@ -84,44 +91,78 @@ export default function MenteeCalendarPage() {
   } = useCalendarState();
 
   const subjectsForSelectedDate = getSubjectsForDate(currentDate);
+  const pickerLabel = useMemo(() => formatMonthLabel(pickerMonth), [pickerMonth]);
+  const pickerGrid = useMemo(() => buildMonthGrid(pickerMonth), [pickerMonth]);
+
+  if (recordOpen) {
+    return (
+      <div className="space-y-5 pb-6">
+        <DailyRecordPage
+          todayLabel={todayLabel}
+          subjects={dailySubjects}
+          onBack={() => setRecordOpen(false)}
+          onOpenDatePicker={() => {
+            setPickerMonth(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+            setDatePickerOpen(true);
+          }}
+        />
+        <DatePickerModal
+          open={datePickerOpen}
+          monthLabel={pickerLabel}
+          monthGrid={pickerGrid}
+          currentDate={currentDate}
+          onPrevMonth={() =>
+            setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+          }
+          onNextMonth={() =>
+            setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+          }
+          onSelectDate={(date) => {
+            selectDateFromMonth(date);
+            setDatePickerOpen(false);
+          }}
+          onClose={() => setDatePickerOpen(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 pb-6">
-      {/* 탭 */}
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setViewMode("daily")}
-          className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
-            viewMode === "daily"
-              ? "bg-violet-600 text-white"
-              : "border border-gray-300 bg-white text-gray-400"
-          }`}
-        >
-          일일
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode("monthly")}
-          className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
-            viewMode === "monthly"
-              ? "bg-violet-600 text-white"
-              : "border border-gray-300 bg-white text-gray-400"
-          }`}
-        >
-          월간
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode("weekly")}
-          className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
-            viewMode === "weekly"
-              ? "bg-violet-600 text-white"
-              : "border border-gray-300 bg-white text-gray-400"
-          }`}
-        >
-          주간
-        </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("daily")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
+              viewMode === "daily"
+                ? "bg-violet-600 text-white"
+                : "border border-gray-300 bg-white text-gray-400"
+            }`}
+          >
+            일일
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("monthly")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
+              viewMode === "monthly"
+                ? "bg-violet-600 text-white"
+                : "border border-gray-300 bg-white text-gray-400"
+            }`}
+          >
+            월간
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("weekly")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
+              viewMode === "weekly"
+                ? "bg-violet-600 text-white"
+                : "border border-gray-300 bg-white text-gray-400"
+            }`}
+          >
+            주간
+          </button>
       </div>
 
       {viewMode === "monthly" && (
@@ -185,7 +226,13 @@ export default function MenteeCalendarPage() {
           openSubjects={openSubjects}
           onPrevDay={goToPrevDay}
           onNextDay={goToNextDay}
+          onOpenDatePicker={() => {
+            setPickerMonth(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+            setDatePickerOpen(true);
+          }}
           onOpenDailyNote={() => setDailyNoteOpen(true)}
+          onGoMonthly={() => setViewMode("monthly")}
+          onOpenRecord={() => setRecordOpen(true)}
           onToggleSubject={toggleSubject}
           onAddTask={openAddTask}
           onToggleTaskDone={toggleTaskDone}
@@ -238,6 +285,25 @@ export default function MenteeCalendarPage() {
         onChangeNoteText={setDailyNoteText}
         onSave={saveDailyNote}
       />
+
+      <DatePickerModal
+        open={datePickerOpen}
+        monthLabel={pickerLabel}
+        monthGrid={pickerGrid}
+        currentDate={currentDate}
+        onPrevMonth={() =>
+          setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+        }
+        onNextMonth={() =>
+          setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+        }
+        onSelectDate={(date) => {
+          selectDateFromMonth(date);
+          setDatePickerOpen(false);
+        }}
+        onClose={() => setDatePickerOpen(false)}
+      />
+
     </div>
   );
 }
