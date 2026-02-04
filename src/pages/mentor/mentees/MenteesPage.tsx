@@ -4,13 +4,13 @@ import { useNavigate } from "react-router-dom";
 import ModalBase from "@/shared/ui/modal/ModalBase";
 
 import { MenteeRows, StatusByMenteeId } from "./data/mock";
-import StudentStatusCard from "@/pages/mentor/home/components/StudentStatusCard";
-import StudentStatusDetailModal from "@/pages/mentor/home/components/StudentStatusDetailModal";
-import ActionCard from "./components/ActionCard";
+import StudentStatusCard from "@/pages/mentor/components/StudentStatusCard";
+import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
+import ActionCard from "../components/ActionCard";
 
-import MenteeList from "./components/MenteeList";
-import type { MenteeRowData } from "./components/MenteeRow";
-import CalendarPopover from "./components/CalendarPopover";
+import MenteeList from "../components/MenteeList";
+import type { MenteeRowData } from "../components/MenteeRow";
+import CalendarPopover from "../components/CalendarPopover";
 
 export default function MenteesPage() {
   const navigate = useNavigate();

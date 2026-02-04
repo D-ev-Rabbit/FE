@@ -1,4 +1,4 @@
-import type { MenteeRowData } from "@/pages/mentor/mentees/components/MenteeRow";
+import type { MenteeRowData } from "@/pages/mentor/components/MenteeRow";
 
 export const MenteeRows: MenteeRowData[] = [
   {

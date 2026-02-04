@@ -1,8 +1,8 @@
 import MenteeCard from "@/shared/ui/card/MenteeCard";
-import StudentStatusCard from "./StudentStatusCard";
-import FeedbackTaskCard from "./FeedbackTaskCard";
+import StudentStatusCard from "../../components/StudentStatusCard";
+import FeedbackTaskCard from "../../components/FeedbackTaskCard";
 import ModalBase from "@/shared/ui/modal/ModalBase";
-import StudentStatusDetailModal from "../components/StudentStatusDetailModal";
+import StudentStatusDetailModal from "../../components/StudentStatusDetailModal";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 

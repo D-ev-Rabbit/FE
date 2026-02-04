@@ -1,4 +1,4 @@
-import type { MenteeRowData } from "../../mentees/components/MenteeRow";
+import type { MenteeRowData } from "../../components/MenteeRow";
 
 
 export const mentees = Array.from({ length: 6 }).map((_, i) => ({
@@ -90,24 +90,4 @@ export const feedbackTasks = [
   },
 ];
 
-export const menteeRows: MenteeRowData[] = [
-  {
-    id: "r1",
-    name: "Prashant Kumar Singh",
-    date: "25/2/2023",
-    avatarUrl:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
-    courseType: "FRONTEND",
-    courseTitle: "Understanding Concept Of React",
-  },
-  {
-    id: "r2",
-    name: "Ravi Kumar",
-    date: "25/2/2023",
-    avatarUrl:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
-    courseType: "FRONTEND",
-    courseTitle: "Understanding Concept Of React",
-  },
-];
 
