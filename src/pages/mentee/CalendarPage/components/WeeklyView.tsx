@@ -6,6 +6,16 @@ import {
 } from "react-icons/hi2";
 import type { SubjectGroup, Task } from "../types/calendar";
 import { dayLabels, formatMonthLabel } from "../utils/date";
+import { formatStudyTime, parseStudyMinutes } from "../utils/time";
+
+const SUBJECT_BADGE_STYLES: Record<
+  string,
+  { bg: string; text: string; border: string }
+> = {
+  국어: { bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-200" },
+  영어: { bg: "bg-rose-100", text: "text-rose-800", border: "border-rose-200" },
+  수학: { bg: "bg-indigo-100", text: "text-indigo-800", border: "border-indigo-200" },
+};
 
 type WeeklyViewProps = {
   weekStart: Date;
@@ -21,6 +31,7 @@ type WeeklyViewProps = {
   onAddTask: (subjectName: string) => void;
   onToggleTaskDone: (subjectId: string, taskId: string) => void;
   onOpenTaskActions: (subjectId: string, task: Task) => void;
+  onGoDaily: () => void;
 };
 
 export default function WeeklyView({
@@ -37,7 +48,20 @@ export default function WeeklyView({
   onAddTask,
   onToggleTaskDone,
   onOpenTaskActions,
+  onGoDaily,
 }: WeeklyViewProps) {
+  const monthLabel = formatMonthLabel(weekStart);
+  const weekRangeLabel = `${
+    weekStart.getMonth() + 1
+  }/${weekStart.getDate()} - ${weekDays[6].getMonth() + 1}/${weekDays[6].getDate()}`;
+  const weekTotalMinutes = weekDays.reduce((acc, day) => {
+    const minutes = getTasksForDate(day).reduce(
+      (sum, task) => sum + parseStudyMinutes(task.time),
+      0
+    );
+    return acc + minutes;
+  }, 0);
+
   return (
     <>
       <div className="rounded-[26px] border border-gray-200 bg-white px-4 py-5 shadow-sm">
@@ -50,10 +74,8 @@ export default function WeeklyView({
           >
             ‹
           </button>
-          <div className="text-sm font-semibold text-gray-500">
-            {formatMonthLabel(weekStart)} · {weekStart.getMonth() + 1}/{weekStart.getDate()}
-            {" - "}
-            {weekDays[6].getMonth() + 1}/{weekDays[6].getDate()}
+          <div className="text-center">
+            <div className="text-base font-semibold text-gray-900">{monthLabel}</div>
           </div>
           <button
             type="button"
@@ -82,6 +104,12 @@ export default function WeeklyView({
               day.getMonth() === currentDate.getMonth() &&
               day.getDate() === currentDate.getDate();
             const dayTasks = getTasksForDate(day).filter((task) => !task.done);
+            const subjectCounts = dayTasks.reduce<Record<string, number>>((acc, task) => {
+              const key = task.subject ?? "과목";
+              acc[key] = (acc[key] ?? 0) + 1;
+              return acc;
+            }, {});
+            const subjectEntries = Object.entries(subjectCounts);
             return (
               <div key={`${day.getMonth()}-${day.getDate()}`} className="space-y-2">
                 <button
@@ -98,16 +126,25 @@ export default function WeeklyView({
                 >
                   {day.getDate()}
                 </button>
-                <div className="space-y-0.5 text-[9px] leading-tight">
-                  {dayTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="truncate rounded-md bg-gray-900 px-1.5 py-0.5 text-white"
-                    >
-                      {task.title}
+                {subjectEntries.length > 0 && (
+                  <div className="flex w-full justify-center">
+                    <div className="flex flex-col gap-0.5 text-left text-[9px] font-semibold leading-tight">
+                      {subjectEntries.map(([subject, count]) => (
+                        <div
+                          key={subject}
+                          className={`flex items-center gap-1 rounded-md border px-1 py-0 ${
+                            SUBJECT_BADGE_STYLES[subject]?.bg ?? "bg-gray-100"
+                          } ${SUBJECT_BADGE_STYLES[subject]?.text ?? "text-gray-600"} ${
+                            SUBJECT_BADGE_STYLES[subject]?.border ?? "border-gray-200"
+                          }`}
+                        >
+                          <span className="truncate">{subject}</span>
+                          <span className="text-[8px]">{count}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -115,12 +152,12 @@ export default function WeeklyView({
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-2 shadow-md">
-        <div className="flex items-center justify-between pt-2 pb-1">
-          <div className="text-sm font-semibold text-gray-900">주간 플래너</div>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2 pt-2 pb-2">
           <div className="text-xs font-semibold text-gray-400">
-            {formatMonthLabel(weekStart)} · {weekStart.getMonth() + 1}/{weekStart.getDate()}
-            {" - "}
-            {weekDays[6].getMonth() + 1}/{weekDays[6].getDate()}
+            {monthLabel} · {weekRangeLabel}
+          </div>
+          <div className="text-sm font-semibold text-gray-900">
+            총 공부시간 {formatStudyTime(weekTotalMinutes)}
           </div>
         </div>
         {subjects.map((subject, index) => {
@@ -134,6 +171,9 @@ export default function WeeklyView({
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-gray-900">
                     {subject.name}
+                  </span>
+                  <span className="text-xs font-semibold text-gray-500">
+                    {subject.tasks.length}개
                   </span>
                   <button
                     type="button"
@@ -208,6 +248,13 @@ export default function WeeklyView({
             </div>
           );
         })}
+        <button
+          type="button"
+          onClick={onGoDaily}
+          className="mt-3 ml-auto block w-fit border-0 bg-transparent px-0 py-0 text-xs font-medium text-gray-500"
+        >
+          일일 플래너로 이동 →
+        </button>
       </div>
     </>
   );

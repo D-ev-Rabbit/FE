@@ -29,18 +29,6 @@ const INITIAL_SUBJECTS: SubjectGroup[] = [
 
 const INITIAL_GOALS: MonthGoal[] = [];
 
-const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
-const WEEKLY_REPEAT_COUNT = 8;
-const WEEKDAY_TO_INDEX: Record<string, number> = {
-  일: 0,
-  월: 1,
-  화: 2,
-  수: 3,
-  목: 4,
-  금: 5,
-  토: 6,
-};
-
 export default function useCalendarState() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -52,8 +40,6 @@ export default function useCalendarState() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState("국어");
   const [taskDraftText, setTaskDraftText] = useState("");
-  const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
-  const [repeatMode, setRepeatMode] = useState<"weekly" | "once">("weekly");
   const [taskActionOpen, setTaskActionOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<{ subjectId: string; task: Task } | null>(
     null
@@ -123,8 +109,6 @@ export default function useCalendarState() {
   const openAddTask = (subjectName: string) => {
     setSelectedSubject(subjectName);
     setTaskDraftText("");
-    setSelectedWeekdays([]);
-    setRepeatMode("weekly");
     setIsModalOpen(true);
   };
 
@@ -136,31 +120,17 @@ export default function useCalendarState() {
   const addTask = () => {
     const title = taskDraftText.trim();
     if (!title) return;
-    const selectedDays =
-      selectedWeekdays.length > 0
-        ? selectedWeekdays
-        : [WEEKDAYS[(currentDate.getDay() + 6) % 7]];
-    const weekStartDate = addDays(currentDate, -currentDate.getDay());
-    const offsets = selectedDays
-      .map((day) => WEEKDAY_TO_INDEX[day])
-      .filter((value) => value !== undefined);
-    const targetDates =
-      repeatMode === "weekly"
-        ? Array.from({ length: WEEKLY_REPEAT_COUNT }, (_, weekIndex) =>
-            offsets.map((offset) => addDays(weekStartDate, weekIndex * 7 + offset))
-          ).flat()
-        : offsets.map((offset) => addDays(weekStartDate, offset));
     setSubjects((prev) =>
       prev.map((subject) => {
         if (subject.name !== selectedSubject) return subject;
         return {
           ...subject,
           tasks: [
-            ...targetDates.map((date) => ({
-              id: `task-${Date.now()}-${date.getTime()}`,
+            {
+              id: `task-${Date.now()}-${currentDate.getTime()}`,
               title,
-              date: formatDateInput(date),
-            })),
+              date: formatDateInput(currentDate),
+            },
             ...subject.tasks,
           ],
         };
@@ -188,12 +158,6 @@ export default function useCalendarState() {
   const selectDateFromMonth = (date: Date) => {
     setCurrentDate(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
     setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-  };
-
-  const toggleWeekday = (day: string) => {
-    setSelectedWeekdays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
   };
 
   const openTaskActions = (subjectId: string, task: Task) => {
@@ -373,8 +337,6 @@ export default function useCalendarState() {
     isModalOpen,
     selectedSubject,
     taskDraftText,
-    selectedWeekdays,
-    repeatMode,
     taskActionOpen,
     activeTask,
     taskEditOpen,
@@ -397,12 +359,8 @@ export default function useCalendarState() {
     progress,
     weekStart,
     weekDays,
-    weekdays: WEEKDAYS,
-
     setViewMode,
     setIsModalOpen,
-    setSelectedWeekdays,
-    setRepeatMode,
     setTaskDraftText,
     setTaskActionOpen,
     setTaskEditOpen,
@@ -424,7 +382,6 @@ export default function useCalendarState() {
     goToPrevMonth,
     goToNextMonth,
     selectDateFromMonth,
-    toggleWeekday,
     openTaskActions,
     toggleTaskDone,
     deleteTask,
