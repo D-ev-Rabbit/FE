@@ -18,7 +18,7 @@ export default function LoginPage() {
     }
 
     if (role === "mentor") navigate("/mentor/home");
-    else navigate("/mentee/home");
+    else navigate("/mentee/calendar");
   };
 
   return (
@@ -160,39 +160,12 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* 비밀번호 찾기 (테두리 제거) */}
-        <div className="mt-3 text-right">
-          <button
-            type="button"
-            className="text-xs text-violet-600 bg-white hover:underline focus:border-transparent focus:outline-none focus:ring-0 hover:border-transparent hover:underline"
-          >
-            비밀번호 찾기
-          </button>
-        </div>
-
         {/* 로그인 */}
         <button
           onClick={handleLogin}
-          className="mt-5 w-full rounded-xl bg-violet-700 py-3 text-sm font-semibold text-white hover:bg-violet-800"
-        >
+          className="mt-10 w-full rounded-xl bg-violet-700 py-3 text-sm font-semibold text-white hover:bg-violet-800">
           로그인
         </button>
-
-        {/* 회원가입 (테두리 제거) */}
-        <div className="mt-4 text-center text-xs text-gray-500">
-          계정이 없다면?{" "}
-          <button
-            type="button"
-            className="
-              rounded-xl px-3 py-2 text-sm font-semibold text-violet-600
-              bg-white
-              hover:border-transparent hover:underline
-              focus:border-transparent focus:outline-none focus:ring-0
-              active:border-transparent
-              transition">
-            회원가입
-          </button>
-        </div>
       </div>
     </div>
   );

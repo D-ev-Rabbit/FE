@@ -1,9 +1,8 @@
-export type NoticeCategory = "task" | "todo" | "feedback" | "system";
+export type NoticeCategory = "task_feedback" | "planner_feedback" | "task_missing";
 
 export type Notice = {
-  id: string;
+  id?: string;
   category: NoticeCategory;
   title: string;
   timeLabel: string;
-  read?: boolean;
 };

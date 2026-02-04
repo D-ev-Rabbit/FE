@@ -13,10 +13,10 @@ import MentorTodoPage from "@/pages/mentor/TodoPage";
 import MentorMenteesPage from "@/pages/mentor/MenteesPage";
 import MentorSettingsPage from "@/pages/mentor/SettingsPage";
 
-import MenteeHomePage from "@/pages/mentee/HomePage";
 import MenteeTasksPage from "@/pages/mentee/TasksPage";
+import MenteeMyPage from "@/pages/mentee/MyPage";
 import MenteeCalendarPage from "@/pages/mentee/CalendarPage/index";
-import MenteeSettingsPage from "@/pages/mentee/SettingsPage";
+import MenteeActivityPage from "@/pages/mentee/ActivityPage";
 
 import NotFoundPage from "@/pages/notfound/NotFoundPage";
 
@@ -54,10 +54,10 @@ export const router = createBrowserRouter([
     element: <MenteeLayout />,
     children: [
       { index: true, element: <Navigate to="home" replace /> },
-      { path: "home", element: <MenteeHomePage /> },
+      { path: "mypage", element: <MenteeMyPage /> },
       { path: "tasks", element: <MenteeTasksPage /> },
       { path: "calendar", element: <MenteeCalendarPage /> },
-      { path: "settings", element: <MenteeSettingsPage /> },
+      { path: "activity", element: <MenteeActivityPage /> },
     ],
   },
 
