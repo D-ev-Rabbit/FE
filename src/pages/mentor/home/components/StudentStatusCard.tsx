@@ -35,12 +35,12 @@ export default function StudentStatusCard({
         if (e.key === "Enter" || e.key === " ") onClick();
       }}
       className={clsx(
-        "w-full max-w-xl rounded-2xl bg-white p-4 shadow-sm border",
-        onClick && "cursor-pointer hover:shadow-md transition",
+        "w-full min-w-0 rounded-2xl bg-white p-6 shadow-sm border",
+        onClick && "cursor-pointer transition hover:shadow-md",
         className
       )}
     >
-        <div className="p-6">
+        <div className="w-full max-w-xl rounded-2xl bg-white ">
         <div className="flex items-start justify-between">
             <div>
             <p className="text-lg font-semibold">현황</p>
