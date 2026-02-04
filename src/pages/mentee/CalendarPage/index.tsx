@@ -16,14 +16,13 @@ export default function MenteeCalendarPage() {
   const [pickerMonth, setPickerMonth] = useState(() => new Date());
   const {
     currentDate,
+    currentDateKey,
     viewMode,
     dailySubjects,
     openSubjects,
     isModalOpen,
     selectedSubject,
     taskDraftText,
-    selectedWeekdays,
-    repeatMode,
     taskActionOpen,
     activeTask,
     taskEditOpen,
@@ -45,10 +44,8 @@ export default function MenteeCalendarPage() {
     progress,
     weekStart,
     weekDays,
-    weekdays,
     setViewMode,
     setIsModalOpen,
-    setRepeatMode,
     setTaskDraftText,
     setTaskActionOpen,
     setTaskEditOpen,
@@ -68,7 +65,6 @@ export default function MenteeCalendarPage() {
     goToPrevMonth,
     goToNextMonth,
     selectDateFromMonth,
-    toggleWeekday,
     openTaskActions,
     toggleTaskDone,
     deleteTask,
@@ -90,6 +86,12 @@ export default function MenteeCalendarPage() {
     saveDailyNote,
   } = useCalendarState();
 
+  const scrollToTop = () => {
+    const scrollTarget = document.querySelector("main");
+    scrollTarget?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  };
+
   const subjectsForSelectedDate = getSubjectsForDate(currentDate);
   const pickerLabel = useMemo(() => formatMonthLabel(pickerMonth), [pickerMonth]);
   const pickerGrid = useMemo(() => buildMonthGrid(pickerMonth), [pickerMonth]);
@@ -100,6 +102,14 @@ export default function MenteeCalendarPage() {
         <DailyRecordPage
           todayLabel={todayLabel}
           subjects={dailySubjects}
+          dateKey={currentDateKey}
+          readOnly={
+            !(
+              currentDate.getFullYear() === new Date().getFullYear() &&
+              currentDate.getMonth() === new Date().getMonth() &&
+              currentDate.getDate() === new Date().getDate()
+            )
+          }
           onBack={() => setRecordOpen(false)}
           onOpenDatePicker={() => {
             setPickerMonth(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
@@ -184,6 +194,11 @@ export default function MenteeCalendarPage() {
           onToggleSubject={toggleSubject}
           onToggleTaskDone={toggleTaskDone}
           onOpenTaskActions={openTaskActions}
+          getTasksForDate={getTasksForDate}
+          onGoDaily={() => {
+            setViewMode("daily");
+            requestAnimationFrame(scrollToTop);
+          }}
           goalModalOpen={goalModalOpen}
           goalDraftTitle={goalDraftTitle}
           goalEditId={goalEditId}
@@ -212,6 +227,10 @@ export default function MenteeCalendarPage() {
           onAddTask={openAddTask}
           onToggleTaskDone={toggleTaskDone}
           onOpenTaskActions={openTaskActions}
+          onGoDaily={() => {
+            setViewMode("daily");
+            requestAnimationFrame(scrollToTop);
+          }}
         />
       )}
 
@@ -245,11 +264,6 @@ export default function MenteeCalendarPage() {
         onClose={() => setIsModalOpen(false)}
         selectedSubject={selectedSubject}
         taskDraftText={taskDraftText}
-        weekdays={weekdays}
-        selectedWeekdays={selectedWeekdays}
-        repeatMode={repeatMode}
-        onToggleWeekday={toggleWeekday}
-        onSetRepeatMode={setRepeatMode}
         onChangeTaskDraftText={setTaskDraftText}
         onAddTask={addTask}
       />

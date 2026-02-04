@@ -8,6 +8,8 @@ import SubjectRecordModal from "./SubjectRecordModal";
 type DailyRecordPageProps = {
   todayLabel: string;
   subjects: SubjectGroup[];
+  dateKey: string;
+  readOnly: boolean;
   onBack: () => void;
   onOpenDatePicker: () => void;
 };
@@ -101,6 +103,8 @@ const calcDurationMinutes = (start: string, end: string) => {
 export default function DailyRecordPage({
   todayLabel,
   subjects,
+  dateKey,
+  readOnly,
   onBack,
   onOpenDatePicker,
 }: DailyRecordPageProps) {
@@ -116,7 +120,10 @@ export default function DailyRecordPage({
   const [manualError, setManualError] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
-  const [records, setRecords] = useState<RecordItem[]>([]);
+  const [recordsByDate, setRecordsByDate] = useState<Record<string, RecordItem[]>>(
+    {}
+  );
+  const records = recordsByDate[dateKey] ?? [];
 
   const subjectColorMap = useMemo(() => {
     const map = new Map<string, (typeof SUBJECT_COLORS)[number]>();
@@ -170,6 +177,7 @@ export default function DailyRecordPage({
   }, [autoElapsedSec]);
 
   const openRecordModal = (subjectId: string) => {
+    if (readOnly) return;
     if (autoRunning && runningSubjectId && subjectId !== runningSubjectId) {
       setPendingSubjectId(subjectId);
       setConfirmOpen(true);
@@ -207,17 +215,23 @@ export default function DailyRecordPage({
       (subject) => subject.id === runningSubjectId
     );
     if (durationSeconds > 0 && runningSubject) {
-      setRecords((prev) => [
-        {
-          id: `record-${Date.now()}`,
-          subjectId: runningSubject.id,
-          subjectName: runningSubject.name,
-          durationMinutes,
-          startTime: startLabel,
-          endTime: endLabel,
-        },
-        ...prev,
-      ]);
+      setRecordsByDate((prev) => {
+        const next = prev[dateKey] ?? [];
+        return {
+          ...prev,
+          [dateKey]: [
+            {
+              id: `record-${Date.now()}`,
+              subjectId: runningSubject.id,
+              subjectName: runningSubject.name,
+              durationMinutes,
+              startTime: startLabel,
+              endTime: endLabel,
+            },
+            ...next,
+          ],
+        };
+      });
     }
     resetAuto();
   };
@@ -314,6 +328,7 @@ export default function DailyRecordPage({
   }, [records, autoRunning, autoStart, runningSubjectId]);
 
   const handleAutoToggle = () => {
+    if (readOnly) return;
     if (autoRunning) {
       if (runningSubjectId && runningSubjectId !== activeSubjectId) {
         setPendingSubjectId(activeSubjectId);
@@ -328,23 +343,30 @@ export default function DailyRecordPage({
   };
 
   const handleSaveManual = () => {
+    if (readOnly) return;
     const duration = calcDurationMinutes(manualStart, manualEnd);
     if (duration === 0 || !activeSubject) {
       setManualError("종료 시간은 시작 시간보다 늦어야 합니다");
       return;
     }
     setManualError("");
-    setRecords((prev) => [
-      {
-        id: `record-${Date.now()}`,
-        subjectId: activeSubject.id,
-        subjectName: activeSubject.name,
-        durationMinutes: duration,
-        startTime: manualStart,
-        endTime: manualEnd,
-      },
-      ...prev,
-    ]);
+    setRecordsByDate((prev) => {
+      const next = prev[dateKey] ?? [];
+      return {
+        ...prev,
+        [dateKey]: [
+          {
+            id: `record-${Date.now()}`,
+            subjectId: activeSubject.id,
+            subjectName: activeSubject.name,
+            durationMinutes: duration,
+            startTime: manualStart,
+            endTime: manualEnd,
+          },
+          ...next,
+        ],
+      };
+    });
     setRecordModalOpen(false);
   };
   const rowHeight = 18;
@@ -382,9 +404,10 @@ export default function DailyRecordPage({
               type="button"
               key={subject.id}
               onClick={() => openRecordModal(subject.id)}
+              disabled={readOnly}
               className={`flex min-w-0 items-center justify-center gap-1 rounded-2xl px-1.5 py-1 ${color.bg} ${
                 isRunning ? "border-2 border-emerald-400" : ""
-              }`}
+              } ${readOnly ? "opacity-50" : ""}`}
             >
               <span className={`h-2 w-2 rounded-full ${color.dot}`} />
               <span className={`text-[11px] font-semibold ${color.text} truncate`}>
@@ -402,10 +425,10 @@ export default function DailyRecordPage({
       </div>
 
       <div>
-        <div className="mt-3 rounded-2xl bg-gray-50 px-1 py-0.5">
+        <div className="mt-3 overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-gray-50 via-[#F7F8FC] to-[#F1F3F9] p-0 shadow-sm">
           <div className="-ml-2 grid grid-cols-[36px_1fr] gap-1 items-start">
             <div
-              className="grid text-[7px] font-semibold text-gray-400 leading-none"
+              className="grid text-[7px] font-semibold text-gray-400 leading-none bg-white/50"
               style={{ gridTemplateRows: `repeat(24, ${rowHeight}px)` }}
             >
               {hourLabels.map((hour) => (
@@ -415,15 +438,17 @@ export default function DailyRecordPage({
               ))}
             </div>
             <div
-              className="relative box-border bg-white"
+              className="relative box-border"
               style={{
                 height: totalRows * rowHeight,
-                border: "1px solid #e5e7eb",
+                padding: "1px",
+                backgroundColor: "transparent",
                 backgroundImage:
-                  "linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)",
+                  "linear-gradient(to right, rgba(214,219,232,0.55) 1px, transparent 1px), linear-gradient(to bottom, rgba(214,219,232,0.55) 1px, transparent 1px)",
                 backgroundSize: `calc(100% / 12) 100%, 100% ${rowHeight}px`,
-                backgroundPosition: "0 0, 0 0, 0 0",
-                backgroundClip: "padding-box",
+                backgroundPosition: "-1px -1px, -1px -1px",
+                backgroundOrigin: "content-box",
+                backgroundClip: "content-box",
               }}
             >
               {timetableSegments.map((segment) => {
@@ -454,6 +479,11 @@ export default function DailyRecordPage({
 
       <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
         <div className="text-sm font-semibold text-gray-700">오늘 기록</div>
+        {readOnly && (
+          <div className="mt-2 text-xs font-semibold text-gray-400">
+            오늘 날짜에서만 기록할 수 있어요.
+          </div>
+        )}
         <div className="mt-3 space-y-2">
           {records.length === 0 && (
             <div className="text-xs font-semibold text-gray-400">
@@ -487,8 +517,12 @@ export default function DailyRecordPage({
                 <button
                   type="button"
                   onClick={() =>
-                    setRecords((prev) => prev.filter((item) => item.id !== record.id))
+                    setRecordsByDate((prev) => ({
+                      ...prev,
+                      [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
+                    }))
                   }
+                  disabled={readOnly}
                   className="rounded-full border border-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-500"
                   aria-label="기록 삭제"
                 >

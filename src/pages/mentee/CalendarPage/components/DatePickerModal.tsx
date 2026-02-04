@@ -1,5 +1,5 @@
 import ModalBase from "@/shared/ui/modal/ModalBase";
-import { HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineXMark } from "react-icons/hi2";
+import { HiOutlineXMark } from "react-icons/hi2";
 import type { MonthCell } from "../types/calendar";
 import { dayLabels } from "../utils/date";
 
@@ -31,25 +31,25 @@ export default function DatePickerModal({
           <button
             type="button"
             onClick={onPrevMonth}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
             aria-label="이전 달"
           >
-            <HiOutlineChevronLeft className="h-4 w-4" />
+            ‹
           </button>
           <div className="text-sm font-semibold text-gray-900">{monthLabel}</div>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={onNextMonth}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
               aria-label="다음 달"
             >
-              <HiOutlineChevronRight className="h-4 w-4" />
+              ›
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
               aria-label="닫기"
             >
               <HiOutlineXMark className="h-4 w-4" />

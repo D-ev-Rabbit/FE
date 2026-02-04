@@ -74,7 +74,7 @@ export default function DailyView({
               <button
                 type="button"
                 onClick={onOpenDatePicker}
-                className="text-center text-base font-semibold text-gray-900 leading-none"
+                className="border-0 bg-white p-0 text-center text-base font-semibold text-gray-900 leading-none outline-none focus:outline-none focus-visible:outline-none"
                 aria-label="날짜 선택"
               >
                 {todayLabel}
@@ -123,11 +123,17 @@ export default function DailyView({
       </button>
 
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-900">공부 시간</div>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
           <div className="text-sm font-semibold text-gray-900">
-            총 {formatStudyTime(totalStudyMinutes)}
+            공부 시간 {formatStudyTime(totalStudyMinutes)}
           </div>
+          <button
+            type="button"
+            onClick={onOpenRecord}
+            className="inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700"
+          >
+            기록하기
+          </button>
         </div>
         <div className="mt-3 flex flex-wrap gap-3">
           {studyTimes.map((subject) => (
@@ -145,13 +151,6 @@ export default function DailyView({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onOpenRecord}
-          className="mt-3 w-full text-right text-xs font-semibold text-violet-600"
-        >
-          기록하기
-        </button>
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-2 shadow-md">
