@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModalBase from "@/shared/ui/modal/ModalBase";
+import { FaRegCalendar, FaPen } from "react-icons/fa";
 
 import { MenteeRows, StatusByMenteeId } from "./mentees/data/mock";
 import ActionCard from "./components/ActionCard";
@@ -103,7 +104,7 @@ export default function MentorTasksPage() {
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2 text-sm text-gray-400">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                    📅
+                    <FaRegCalendar />
                   </span>
                   <span>
                     {selectedDate.toLocaleDateString("en-US", {
@@ -145,7 +146,7 @@ export default function MentorTasksPage() {
                 <ActionCard
                   label="피드백 작성하기"
                   onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
-                  iconLeft="✏️"
+                  iconLeft={<FaPen className="h-4 w-4" />}
                 />
               </div>
               {/* 과제 과목 필터버튼 */}

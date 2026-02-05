@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModalBase from "@/shared/ui/modal/ModalBase";
-
+import { FaRegCalendar, FaPen, FaTasks } from "react-icons/fa";
 import { MenteeRows, StatusByMenteeId } from "./data/mock";
 import StudentStatusCard from "@/pages/mentor/components/StudentStatusCard";
 import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
@@ -63,7 +63,7 @@ export default function MenteesPage() {
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                📅
+                <FaRegCalendar/>
               </span>
               <span>
                 {selectedDate.toLocaleDateString("en-US", {
@@ -156,12 +156,12 @@ export default function MenteesPage() {
             <ActionCard
               label="할 일 배정하기"
               onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
-              iconLeft="📋"
+              iconLeft={<FaTasks className="h-4 w-4" />}
             />
             <ActionCard
               label="피드백 작성하기"
               onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
-              iconLeft="✏️"
+              iconLeft={<FaPen className="h-4 w-4" />}
             />
           </div>
         </aside>

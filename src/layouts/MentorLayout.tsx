@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import MentorSidebarPc from "@/widgets/pc/MentorSidebarPc";
-import MentorHeaderPc from "@/widgets/pc/MentorHeaderPc";
 import { cn } from "@/shared/lib/cn";
 import { FiMenu, FiX } from "react-icons/fi";
 
@@ -26,7 +25,7 @@ export default function MentorLayout() {
   }, []);
 
   return (
-    <div className="min-h-dvh w-full bg-gray-50 lg:h-dvh lg:overflow-hidden">
+    <div className="min-h-dvh w-full bg-gray-50 lg:h-dvh">
       {/* dim */}
       <div
         className={cn(
@@ -81,15 +80,11 @@ export default function MentorLayout() {
                 >
                   <FiMenu />
                 </button>
-
-                <div className="ml-auto">
-                  <MentorHeaderPc />
-                </div>
               </div>
             </header>
 
-            <main className="p-6 pt-4 lg:min-h-0 lg:overflow-y-auto">
-              <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+            <main className="lg:min-h-0 lg:overflow-y-auto lg:h-full">
+              <div className="rounded-3xl bg-white p-6 sm:p-8 mr-3">
                 <Outlet />
               </div>
 
