@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
+import { login } from "@/api/auth"; 
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -10,21 +11,37 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setError(null);
+
     if (!email || !password) {
       setError("이메일 또는 비밀번호를 확인해주세요.");
       return;
     }
 
-    if (role === "mentor") navigate("/mentor/home");
-    else navigate("/mentee/calendar");
+    try {
+      setLoading(true);
+
+      const serverRole = role === "mentor" ? "MENTOR" : "MENTEE";
+      const res = await login({ email, password, role: serverRole });
+
+      // 응답 role이 null이면 요청 role 기준으로 라우팅
+      const finalRole = res.role ?? serverRole;
+
+      if (finalRole === "MENTOR") navigate("/mentor/home");
+      else navigate("/mentee/calendar");
+    } catch (e: any) {
+      setError(e?.message ?? "로그인에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
-
         {/* 아바타 */}
         <div className="mx-auto mb-3 flex flex-col items-center justify-center gap-2 ">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-white">
@@ -35,80 +52,58 @@ export default function LoginPage() {
           </div>
         </div>
 
-
         {/* Welcome */}
         <div className="text-center mb-5">
           <p className="text-sm font-semibold text-violet-600">Welcome</p>
         </div>
 
         {/* 멘토 / 멘티 토글 */}
-        <div
-          className="
-      relative grid grid-cols-2 items-center
-      rounded-2xl p-1.5
-      bg-gray-100
-      ring-1 ring-black/5
-    "
-        >
-          {/* 선택된 pill */}
+        <div className="relative grid grid-cols-2 items-center rounded-2xl p-1.5 bg-gray-100 ring-1 ring-black/5">
           <div
             className={`
-        absolute top-1.5 left-1.5
-        h-[calc(100%-10px)] w-[calc(50%-6px)]
-        rounded-xl
-        bg-gradient-to-b from-violet-500 to-violet-600
-        shadow-md
-        transition-transform duration-300 ease-out
-        ${role === "mentee" ? "translate-x-full" : "translate-x-0"}
-      `}
+              absolute top-1.5 left-1.5
+              h-[calc(100%-10px)] w-[calc(50%-6px)]
+              rounded-xl
+              bg-gradient-to-b from-violet-500 to-violet-600
+              shadow-md
+              transition-transform duration-300 ease-out
+              ${role === "mentee" ? "translate-x-full" : "translate-x-0"}
+            `}
           />
 
-          {/* 멘토 */}
           <button
             type="button"
             onClick={() => setRole("mentor")}
             className={`
-        relative z-10 h-11 rounded-xl
-        text-sm font-semibold transition-all duration-200
-        active:scale-[0.97]
-        ${role === "mentor"
+              relative z-10 h-11 rounded-xl
+              text-sm font-semibold transition-all duration-200
+              active:scale-[0.97]
+              ${role === "mentor"
                 ? "text-violet-600 font-bold"
-                : "text-gray-400 hover:text-gray-600"
-              }
-      `}
+                : "text-gray-400 hover:text-gray-600"}
+            `}
           >
             멘토
           </button>
 
-          {/* 멘티 */}
           <button
             type="button"
             onClick={() => setRole("mentee")}
             className={`
-        relative z-10 h-11 rounded-xl
-        text-sm font-semibold transition-all duration-200
-        active:scale-[0.97]
-        ${role === "mentee"
+              relative z-10 h-11 rounded-xl
+              text-sm font-semibold transition-all duration-200
+              active:scale-[0.97]
+              ${role === "mentee"
                 ? "text-violet-600 font-bold"
-                : "text-gray-400 hover:text-gray-600"
-              }`}>
+                : "text-gray-400 hover:text-gray-600"}
+            `}
+          >
             멘티
           </button>
         </div>
 
-
-        {/* 상단 안내 (멘토 선택 시만) */}
         {role === "mentor" && (
-          <div
-            className={`
-      mt-4 text-center text-sm text-gray-500
-      transition-all duration-300 ease-out
-      ${role === "mentor"
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 -translate-y-2 h-0 overflow-hidden"
-              }
-    `}
-          >
+          <div className="mt-4 text-center text-sm text-gray-500">
             원활한 피드백을 위해 PC 접속을 권장합니다.
           </div>
         )}
@@ -125,9 +120,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-violet-600">
-              비밀번호
-            </label>
+            <label className="text-xs font-medium text-violet-600">비밀번호</label>
             <div className="relative">
               <input
                 type={showPw ? "text" : "password"}
@@ -138,10 +131,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 
-                    bg-transparent p-0 
-                    border-none outline-none 
-                    focus:outline-none focus:ring-0"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent p-0 border-none outline-none focus:outline-none focus:ring-0"
               >
                 {showPw ? (
                   <HiOutlineEyeOff className="h-5 w-5 text-violet-400" />
@@ -149,7 +139,6 @@ export default function LoginPage() {
                   <HiOutlineEye className="h-5 w-5 text-violet-400" />
                 )}
               </button>
-
             </div>
           </div>
 
@@ -163,8 +152,13 @@ export default function LoginPage() {
         {/* 로그인 */}
         <button
           onClick={handleLogin}
-          className="mt-10 w-full rounded-xl bg-violet-700 py-3 text-sm font-semibold text-white hover:bg-violet-800">
-          로그인
+          disabled={loading}
+          className={`
+            mt-10 w-full rounded-xl py-3 text-sm font-semibold text-white
+            ${loading ? "bg-violet-400 cursor-not-allowed" : "bg-violet-700 hover:bg-violet-800"}
+          `}
+        >
+          {loading ? "로그인 중..." : "로그인"}
         </button>
       </div>
     </div>
