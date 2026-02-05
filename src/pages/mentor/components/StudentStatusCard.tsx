@@ -43,8 +43,8 @@ export default function StudentStatusCard({
         <div className="w-full max-w-xl rounded-2xl bg-white ">
         <div className="flex items-start justify-between">
             <div>
-            <p className="text-lg font-semibold">현황</p>
             <p className="mt-1 text-sm text-muted-foreground">{studentName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">* 클릭하면 자세한 정보를 볼 수 있습니다.</p>
             </div>
 
             <div className="rounded-md border px-4 py-2 text-sm text-muted-foreground">

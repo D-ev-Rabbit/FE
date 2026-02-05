@@ -30,7 +30,7 @@ export default function MenteeCard({
       className={cn(
         "group relative border bg-white transition",
         selected
-          ? "border-violet-500 bg-violet-50 shadow-[0_10px_30px_rgba(124,58,237,0.12)]"
+          ? "border-violet-500 bg-violet-50 shadow-sm"
           : "border-gray-200 hover:border-gray-300",
         isMo
           ? "w-30 shrink-0 rounded-3xl px-4 py-4 text-center"

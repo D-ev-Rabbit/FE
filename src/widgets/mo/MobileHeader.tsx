@@ -37,8 +37,7 @@ export default function MobileHeader({
 
   /* 로그아웃 */
   const handleLogout = () => {
-    // TODO: 필요하면 토큰/스토리지 정리
-    // localStorage.removeItem("accessToken");
+    localStorage.removeItem("accessToken");
 
     navigate("/auth/login", { replace: true });
   };
