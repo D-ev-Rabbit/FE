@@ -12,6 +12,8 @@ import { buildMonthGrid, formatMonthLabel } from "./utils/date";
 
 import { createMenteeTodo, deleteMenteeTodo, getMenteeTodos, patchMenteeTodo } from "@/api/mentee/todo";
 import type { MenteeTodo, SubjectGroup } from "@/types/planner";
+import { menteeStudySessionApi } from "@/api/mentee/studySession";
+import type { StudySession } from "@/types/studySession";
 
 export default function MenteeCalendarPage() {
   const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
@@ -100,11 +102,26 @@ export default function MenteeCalendarPage() {
 
 
   const [todos, setTodos] = useState<MenteeTodo[]>([]);
+  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
 
   const [openSubjectsUI, setOpenSubjectsUI] = useState<Record<string, boolean>>({});
   const subjectsForSelectedDate = useMemo(
     () => mapTodosToSubjectGroups(todos, DEFAULT_SUBJECTS),
     [todos]
+  );
+
+  const studyMinutesBySubject = useMemo(() => {
+    const record: Record<string, number> = {};
+    for (const session of studySessions) {
+      const minutes = Math.max(1, Math.ceil(session.durationSeconds / 60));
+      record[session.subject] = (record[session.subject] ?? 0) + minutes;
+    }
+    return record;
+  }, [studySessions]);
+
+  const totalStudyMinutes = useMemo(
+    () => Object.values(studyMinutesBySubject).reduce((acc, cur) => acc + cur, 0),
+    [studyMinutesBySubject]
   );
 
   // subjects 바뀌면 전부 열림(true)으로
@@ -124,6 +141,12 @@ export default function MenteeCalendarPage() {
 
   useEffect(() => {
     refetchTodos(currentDateKey).catch(console.error);
+  }, [currentDateKey]);
+
+  useEffect(() => {
+    menteeStudySessionApi.getByDate(currentDateKey)
+      .then((res) => setStudySessions(res.data))
+      .catch(() => setStudySessions([]));
   }, [currentDateKey]);
 
   const handleCreateTodo = async () => {
@@ -456,6 +479,8 @@ export default function MenteeCalendarPage() {
           totalCount={totalCount}
           dailyNoteText={dailyNoteText}
           subjects={subjectsForSelectedDate} //  API 기반 subjects
+          studyMinutesBySubject={studyMinutesBySubject}
+          totalStudyMinutes={totalStudyMinutes}
           openSubjects={openSubjectsUI}      //  우리가 만든 토글 상태
           onPrevDay={goToPrevDay}
           onNextDay={goToNextDay}

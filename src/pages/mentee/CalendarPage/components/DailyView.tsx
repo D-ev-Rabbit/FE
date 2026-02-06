@@ -2,13 +2,11 @@ import {
   HiOutlineChevronDown,
   HiOutlineChevronUp,
   HiOutlineEllipsisHorizontal,
-  HiOutlineCalendarDays,
   HiOutlinePencil,
   HiOutlinePlus,
 } from "react-icons/hi2";
 import type { SubjectGroup } from "../types/calendar";
-import { formatStudyTime, parseStudyMinutes } from "../utils/time";
-import type { MenteeTodo } from "@/types/planner";
+import { parseStudyMinutes } from "../utils/time";
 
 type DailyViewProps = {
   todayLabel: string;
@@ -17,6 +15,8 @@ type DailyViewProps = {
   totalCount: number;
   dailyNoteText: string;
   subjects: SubjectGroup[];
+  studyMinutesBySubject: Record<string, number>;
+  totalStudyMinutes: number;
   openSubjects: Record<string, boolean>;
 
   onPrevDay: () => void;
@@ -38,6 +38,8 @@ export default function DailyView({
   totalCount,
   dailyNoteText,
   subjects,
+  studyMinutesBySubject,
+  totalStudyMinutes,
   openSubjects,
   onPrevDay,
   onNextDay,
@@ -49,14 +51,29 @@ export default function DailyView({
   onToggleTaskDone,
   onOpenTaskActions,
 }: DailyViewProps) {
+  const formatStudyTimeCaps = (minutes: number) => {
+    if (minutes <= 0) return "0M";
+    const hours = Math.floor(minutes / 60);
+    const remain = minutes % 60;
+    if (hours === 0) return `${remain}M`;
+    if (remain === 0) return `${hours}H`;
+    return `${hours}H ${remain}M`;
+  };
+
   const studyTimes = subjects.map((subject) => {
-    const minutes = subject.tasks.reduce(
-      (acc, task) => acc + parseStudyMinutes(task.time),
-      0
-    );
+    const minutes =
+      studyMinutesBySubject[subject.name] ??
+      studyMinutesBySubject[subject.id] ??
+      subject.tasks.reduce((acc, task) => acc + parseStudyMinutes(task.time), 0);
     return { id: subject.id, name: subject.name, minutes };
   });
-  const totalStudyMinutes = studyTimes.reduce((acc, cur) => acc + cur.minutes, 0);
+
+  const subjectCardClass = (name: string) => {
+    if (name === "국어") return "bg-yellow-100 text-gray-800 border-yellow-200";
+    if (name === "영어") return "bg-rose-100 text-gray-800 border-rose-200";
+    if (name === "수학") return "bg-indigo-100 text-gray-800 border-indigo-200";
+    return "bg-gray-100 text-gray-800 border-gray-200";
+  };
 
   return (
     <>
@@ -126,7 +143,7 @@ export default function DailyView({
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
         <div className="grid grid-cols-[1fr_auto] items-center gap-2">
           <div className="text-sm font-semibold text-gray-900">
-            공부 시간 {formatStudyTime(totalStudyMinutes)}
+            총 공부 시간 {formatStudyTimeCaps(totalStudyMinutes)}
           </div>
           <button
             type="button"
@@ -136,14 +153,16 @@ export default function DailyView({
             기록하기
           </button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <div className="mt-3 flex flex-wrap justify-center gap-3">
           {studyTimes.map((subject) => (
             <div
               key={subject.id}
-              className="flex min-w-[80px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm"
+              className={`flex min-w-[80px] flex-col items-center justify-center rounded-2xl border px-3 py-2 text-xs font-semibold shadow-sm ${subjectCardClass(
+                subject.name
+              )}`}
             >
               <span>{subject.name}</span>
-              <span className="text-sm">{formatStudyTime(subject.minutes)}</span>
+              <span className="text-sm">{formatStudyTimeCaps(subject.minutes)}</span>
             </div>
           ))}
           {studyTimes.length === 0 && (

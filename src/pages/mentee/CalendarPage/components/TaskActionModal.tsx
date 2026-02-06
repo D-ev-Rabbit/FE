@@ -1,6 +1,5 @@
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import {
-  HiOutlineClock,
   HiOutlinePencilSquare,
   HiOutlineTrash,
   HiOutlineXMark,
@@ -104,10 +103,6 @@ export default function TaskActionModal({
               </span>
               내일로 이동
             </button>
-            <div className="flex items-center gap-2">
-              <HiOutlineClock className="h-8 w-8 rounded-full bg-gray-100 p-2 text-gray-500" />
-              시간 설정
-            </div>
           </div>
         </div>
       </ModalBase>
