@@ -103,6 +103,9 @@ export default function MenteeCalendarPage() {
 
   const [todos, setTodos] = useState<MenteeTodo[]>([]);
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
+  const [weeklySessionsByDate, setWeeklySessionsByDate] = useState<Record<string, StudySession[]>>(
+    {}
+  );
 
   const [openSubjectsUI, setOpenSubjectsUI] = useState<Record<string, boolean>>({});
   const subjectsForSelectedDate = useMemo(
@@ -123,6 +126,16 @@ export default function MenteeCalendarPage() {
     () => Object.values(studyMinutesBySubject).reduce((acc, cur) => acc + cur, 0),
     [studyMinutesBySubject]
   );
+
+  const weeklyTotalStudyMinutes = useMemo(() => {
+    let total = 0;
+    for (const key of Object.keys(weeklySessionsByDate)) {
+      for (const session of weeklySessionsByDate[key] ?? []) {
+        total += Math.max(1, Math.ceil(session.durationSeconds / 60));
+      }
+    }
+    return total;
+  }, [weeklySessionsByDate]);
 
   // subjects 바뀌면 전부 열림(true)으로
   useEffect(() => {
@@ -148,6 +161,34 @@ export default function MenteeCalendarPage() {
       .then((res) => setStudySessions(res.data))
       .catch(() => setStudySessions([]));
   }, [currentDateKey]);
+
+  useEffect(() => {
+    let ignore = false;
+    const fetchWeek = async () => {
+      const entries = await Promise.all(
+        weekDays.map(async (day) => {
+          const key = toDateKey(day);
+          try {
+            const res = await menteeStudySessionApi.getByDate(key);
+            return [key, res.data as StudySession[]] as const;
+          } catch {
+            return [key, [] as StudySession[]] as const;
+          }
+        })
+      );
+      if (ignore) return;
+      const next: Record<string, StudySession[]> = {};
+      for (const [key, sessions] of entries) {
+        next[key] = sessions ?? [];
+      }
+      setWeeklySessionsByDate(next);
+    };
+
+    fetchWeek();
+    return () => {
+      ignore = true;
+    };
+  }, [weekDays]);
 
   const handleCreateTodo = async () => {
     try {
@@ -420,6 +461,8 @@ export default function MenteeCalendarPage() {
           todayLabel={todayLabel}
           monthGoals={monthGoals}
           subjects={subjectsForSelectedDate}
+          studyMinutesBySubject={studyMinutesBySubject}
+          totalStudyMinutes={totalStudyMinutes}
           openSubjects={openSubjects}
           onPrevMonth={goToPrevMonth}
           onNextMonth={goToNextMonth}
@@ -455,6 +498,7 @@ export default function MenteeCalendarPage() {
           weekDays={weekDays}
           currentDate={currentDate}
           subjects={subjectsForSelectedDate}
+          weekTotalStudyMinutes={weeklyTotalStudyMinutes}
           openSubjects={openSubjects}
           getTasksForDate={getTasksForDate}
           onPrevWeek={goToPrevWeek}

@@ -10,7 +10,7 @@ import {
 } from "react-icons/hi2";
 import type { MonthCell, MonthGoal, SubjectGroup, Task } from "../types/calendar";
 import { dayLabels } from "../utils/date";
-import { formatStudyTime, parseStudyMinutes } from "../utils/time";
+import { parseStudyMinutes } from "../utils/time";
 
 const SUBJECT_BADGE_STYLES: Record<
   string,
@@ -28,6 +28,8 @@ type MonthlyViewProps = {
   todayLabel: string;
   monthGoals: MonthGoal[];
   subjects: SubjectGroup[];
+  studyMinutesBySubject: Record<string, number>;
+  totalStudyMinutes: number;
   openSubjects: Record<string, boolean>;
   onPrevMonth: () => void;
   onNextMonth: () => void;
@@ -60,6 +62,8 @@ export default function MonthlyView({
   todayLabel,
   monthGoals,
   subjects,
+  studyMinutesBySubject,
+  totalStudyMinutes,
   openSubjects,
   onPrevMonth,
   onNextMonth,
@@ -84,12 +88,14 @@ export default function MonthlyView({
   onOpenEditGoal,
   onDeleteGoal,
 }: MonthlyViewProps) {
-  const totalStudyMinutes = subjects.reduce(
-    (acc, subject) =>
-      acc +
-      subject.tasks.reduce((sum, task) => sum + parseStudyMinutes(task.time), 0),
-    0
-  );
+  const formatStudyTimeCaps = (minutes: number) => {
+    if (minutes <= 0) return "0M";
+    const hours = Math.floor(minutes / 60);
+    const remain = minutes % 60;
+    if (hours === 0) return `${remain}M`;
+    if (remain === 0) return `${hours}H`;
+    return `${hours}H ${remain}M`;
+  };
 
   return (
     <>
@@ -136,27 +142,30 @@ export default function MonthlyView({
               return acc;
             }, {});
             const subjectEntries = Object.entries(subjectCounts);
+            const isHidden = !cell.isCurrentMonth;
             return (
               <div key={cell.id} className="flex flex-col items-center justify-start">
-                <button
-                  type="button"
-                  onClick={() => onSelectDate(cell.date)}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
-                    isSelected
-                      ? "bg-violet-100 text-violet-700"
-                      : cell.isToday
-                        ? "bg-violet-600 text-white shadow"
-                        : cell.isCurrentMonth
-                          ? isSunday
+                {isHidden ? (
+                  <div className="h-9 w-9" />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSelectDate(cell.date)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                      isSelected
+                        ? "bg-violet-100 text-violet-700"
+                        : cell.isToday
+                          ? "bg-violet-600 text-white shadow"
+                          : isSunday
                             ? "text-red-500"
                             : "text-gray-900"
-                          : "text-gray-300"
-                  }`}
-                  aria-label={`${cell.date.getMonth() + 1}월 ${cell.day}일`}
-                >
-                  {cell.day}
-                </button>
-                {subjectEntries.length > 0 && (
+                    }`}
+                    aria-label={`${cell.date.getMonth() + 1}월 ${cell.day}일`}
+                  >
+                    {cell.day}
+                  </button>
+                )}
+                {!isHidden && subjectEntries.length > 0 && (
                   <div className="mt-1 flex w-full justify-center px-0.5">
                     <div className="flex flex-col gap-0.5 text-left text-[9px] font-semibold leading-tight">
                       {subjectEntries.map(([subject, count]) => (
@@ -185,11 +194,15 @@ export default function MonthlyView({
         <div className="grid grid-cols-[1fr_auto] items-center gap-2 pt-2 pb-2">
           <div className="text-xs font-semibold text-gray-400">{todayLabel}</div>
           <div className="text-sm font-semibold text-gray-900">
-            총 공부시간 {formatStudyTime(totalStudyMinutes)}
+            총 공부시간 {formatStudyTimeCaps(totalStudyMinutes)}
           </div>
         </div>
         {subjects.map((subject, index) => {
           const isOpen = openSubjects[subject.id];
+          const studyMinutes =
+            studyMinutesBySubject[subject.name] ??
+            studyMinutesBySubject[subject.id] ??
+            subject.tasks.reduce((sum, task) => sum + parseStudyMinutes(task.time), 0);
           return (
             <div
               key={subject.id}
@@ -201,7 +214,7 @@ export default function MonthlyView({
                     {subject.name}
                   </span>
                   <span className="text-xs font-semibold text-gray-500">
-                    {subject.tasks.length}개
+                    {subject.tasks.length}개 · {formatStudyTimeCaps(studyMinutes)}
                   </span>
                   <button
                     type="button"
