@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import { FaRegCalendar, FaPen, FaTasks } from "react-icons/fa";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
-import type { MentorMentee } from "@/types/mentor";
+import type { MentorMentee, MentorMenteeSummary } from "@/types/mentor";
+import { mentorSummaryApi } from "@/api/mentor/summary";
 import StudentStatusCard from "@/pages/mentor/components/StudentStatusCard";
 import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
 import ActionCard from "../components/ActionCard";
@@ -19,6 +20,7 @@ export default function MenteesPage() {
   const [mentees, setMentees] = useState<MentorMentee[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [summary, setSummary] = useState<MentorMenteeSummary | null>(null);
 
 
   useEffect(() => {
@@ -44,6 +46,41 @@ export default function MenteesPage() {
     if (!selectedMenteeId) return null;
     return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
   }, [selectedMenteeId, mentees]);
+
+  useEffect(() => {
+    if (!selectedMenteeId) {
+      setSummary(null);
+      return;
+    }
+    let ignore = false;
+    mentorSummaryApi
+      .getMenteeSummary(Number(selectedMenteeId))
+      .then((res) => {
+        if (ignore) return;
+        setSummary(res.data);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSummary(null);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [selectedMenteeId]);
+
+  const aggregated = useMemo(() => {
+    const subjects = summary?.subjects ?? {};
+    return Object.values(subjects).reduce(
+      (acc, cur) => {
+        acc.todoTotal += cur.todoTotal ?? 0;
+        acc.todoCompleted += cur.todoCompleted ?? 0;
+        acc.feedbackTotal += cur.feedbackTotal ?? 0;
+        acc.feedbackRead += cur.feedbackRead ?? 0;
+        return acc;
+      },
+      { todoTotal: 0, todoCompleted: 0, feedbackTotal: 0, feedbackRead: 0 }
+    );
+  }, [summary]);
 
   const handleSelect = (row: MenteeRowData) => {
     setSelectedMenteeId(row.id);
@@ -137,22 +174,22 @@ export default function MenteesPage() {
                   items={[
                     {
                       label: "To do",
-                      current: 0,
-                      total: 0,
+                      current: aggregated.todoCompleted,
+                      total: aggregated.todoTotal,
                       barClassName: "bg-green-500",
                       trackClassName: "bg-green-100",
                     },
                     {
                       label: "제출파일",
-                      current: 0,
-                      total: 0,
+                      current: aggregated.feedbackRead,
+                      total: aggregated.feedbackTotal,
                       barClassName: "bg-purple-500",
                       trackClassName: "bg-purple-100",
                     },
                     {
                       label: "피드백 작성 완료",
-                      current: 0,
-                      total: 0,
+                      current: aggregated.feedbackRead,
+                      total: aggregated.feedbackTotal,
                       barClassName: "bg-blue-500",
                       trackClassName: "bg-blue-100",
                     },
@@ -165,9 +202,7 @@ export default function MenteesPage() {
                     studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
                     open={statusModalOpen}
                     onClose={() => setStatusModalOpen(false)}
-                    avgStudyTimeText="90H 45M"
-                    minTaskAchievementRate={70}
-                    feedbackResponseRate={85}
+                    summary={summary}
                   />
                 </ModalBase>
               </>
