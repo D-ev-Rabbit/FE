@@ -7,9 +7,9 @@ import { cn } from "@/shared/lib/cn";
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 import { fileApi } from "@/api/file";
-import type { FileUploadResponse } from "@/types/file";
 import axios from "axios";
-import { getMenteeTodo } from "@/api/mentee/todo";
+import { getMenteeTodo, patchMenteeTodo } from "@/api/mentee/todo";
+import { axiosInstance } from "@/api/axiosInstance";
 import type { MenteeTodo } from "@/types/planner";
 
 const statusConfig = {
@@ -36,7 +36,10 @@ export default function MenteeTaskDetailPage() {
   const [showPins, setShowPins] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [uploads, setUploads] = useState<Array<{ id: number; url: string }>>([]);
+  const [pendingUploads, setPendingUploads] = useState<Array<{ id: string; url: string; file: File }>>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSavingTask, setIsSavingTask] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
     open: boolean;
     variant: "success" | "error" | "info";
@@ -56,6 +59,35 @@ export default function MenteeTaskDetailPage() {
       })
       .finally(() => setIsLoadingTask(false));
   }, [taskId]);
+
+  const normalizeFileUrl = (raw: string) => {
+    if (!raw) return "";
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    if (raw.startsWith("file://")) return "";
+    if (raw.startsWith("/")) {
+      const base = axiosInstance.defaults.baseURL ?? "";
+      return `${base}${raw}`;
+    }
+    if (raw.startsWith("Users/") || raw.startsWith("/Users/")) return "";
+    return raw;
+  };
+
+  useEffect(() => {
+    if (!task?.files) {
+      setUploads([]);
+      return;
+    }
+    const next = task.files
+      .map((f) => ({
+        id: f.fileId,
+        url: normalizeFileUrl(f.url),
+      }))
+      .filter((f) => f.url);
+    setUploads(next);
+    if (activeImageIndex >= next.length) {
+      setActiveImageIndex(Math.max(0, next.length - 1));
+    }
+  }, [task, activeImageIndex]);
 
   if (isLoadingTask) {
     return (
@@ -94,34 +126,18 @@ export default function MenteeTaskDetailPage() {
   }
 
   const status = statusConfig[task.isCompleted ? "done" : "pending"];
-  const handleUpload = async (file?: File | null) => {
-    if (!file || !task) return;
-    setIsUploading(true);
-    try {
-      const res = await fileApi.uploadFile(task.id, file);
-      const data: FileUploadResponse = res.data;
-      setUploads((prev) => [...prev, { id: data.id, url: data.url }]);
-      setUploadOpen(false);
-      setUploadResult({
-        open: true,
-        variant: "success",
-        title: "업로드 완료",
-        description: "사진이 정상적으로 업로드되었습니다.",
-      });
-    } catch (error) {
-      const message = axios.isAxiosError(error)
-        ? `${error.response?.data?.message ?? "업로드 실패"} (${error.response?.status ?? "네트워크 오류"})`
-        : "업로드 실패";
-      setUploadResult({
-        open: true,
-        variant: "error",
-        title: "업로드 실패",
-        description: message,
-      });
-    } finally {
-      setIsUploading(false);
-    }
+  const handleUpload = () => {
+    if (!selectedFile) return;
+    const tempUrl = URL.createObjectURL(selectedFile);
+    setPendingUploads((prev) => [
+      ...prev,
+      { id: `pending-${Date.now()}-${prev.length}`, url: tempUrl, file: selectedFile },
+    ]);
+    setSelectedFile(null);
+    setUploadOpen(false);
   };
+
+
   const handleDeleteUpload = (id: number) => {
     setUploads((prev) => {
       const target = prev.find((item) => item.id === id);
@@ -134,6 +150,64 @@ export default function MenteeTaskDetailPage() {
       return next;
     });
   };
+
+  const handleDeletePending = (id: string) => {
+    setPendingUploads((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      return prev.filter((item) => item.id !== id);
+    });
+  };
+
+  const handleSaveTask = async () => {
+    if (!task) return;
+    setIsSavingTask(true);
+    try {
+      let nextUploads = uploads;
+      if (pendingUploads.length > 0) {
+        const results = await Promise.all(
+          pendingUploads.map((p) => fileApi.uploadFile(task.id, p.file))
+        );
+        const uploaded = results.map((r) => ({
+          id: r.data.id,
+          url: normalizeFileUrl(r.data.url),
+        }));
+        nextUploads = [...uploads, ...uploaded];
+        setUploads(nextUploads);
+      }
+
+      await patchMenteeTodo(task.id, {
+        title: task.title,
+        date: task.date,
+        subject: task.subject,
+        goal: task.goal ?? "",
+        isCompleted: true,
+      });
+      setTask((prev) => (prev ? { ...prev, isCompleted: true } : prev));
+      setPendingUploads((prev) => {
+        prev.forEach((p) => URL.revokeObjectURL(p.url));
+        return [];
+      });
+      setUploadResult({
+        open: true,
+        variant: "success",
+        title: "저장 완료",
+        description: "과제가 제출 완료로 저장되었습니다.",
+      });
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? `${error.response?.data?.message ?? "저장 실패"} (${error.response?.status ?? "네트워크 오류"})`
+        : "저장 실패";
+      setUploadResult({
+        open: true,
+        variant: "error",
+        title: "저장 실패",
+        description: message,
+      });
+    } finally {
+      setIsSavingTask(false);
+    }
+  };
   const feedbackPins = [
     { id: 1, left: "70%", top: "20%", text: "문단 첫 문장에 주어-서술어 호응 체크" },
     { id: 2, left: "30%", top: "55%", text: "예시를 하나 더 추가하면 설득력이 좋아져요" },
@@ -142,167 +216,186 @@ export default function MenteeTaskDetailPage() {
   return (
     <>
       <div className="space-y-4 pb-8">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
-      >
-        <FiChevronLeft />
-        과제로 돌아가기
-      </button>
-
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-gray-400">
-            {formatKoreanDate(parseDateKey(task.date))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-500"
-            >
-              <FiDownload size={12} />
-              과제 다운로드(PDF)
-            </button>
-            <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", status.className)}>
-              {status.label}
-            </span>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
-            {task.subject}
-          </span>
-          <div className="text-lg font-bold text-gray-900">{task.title}</div>
-        </div>
-
-      </section>
-
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-700">학습 점검하기</div>
-          <button
-            type="button"
-            onClick={() => setUploadOpen(true)}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-500"
-          >
-            사진 업로드
-          </button>
-        </div>
-        <div className="mt-2 flex flex-col items-center gap-3 text-center text-sm text-gray-500">
-          <div className="grid w-full grid-cols-3 gap-3 pt-2">
-            {uploads.map((upload, index) => {
-              const hasImage = !!upload;
-              return (
-                <button
-                  key={`upload-${upload.id}`}
-                  type="button"
-                  onClick={() => {
-                    if (!hasImage) return;
-                    setActivePinId(null);
-                    setActiveImageIndex(index);
-                    setDetailOpen(true);
-                  }}
-                  className={cn(
-                    "btn-none aspect-[3/4] w-full overflow-hidden bg-transparent p-0 outline-none focus:outline-none focus-visible:outline-none",
-                    hasImage ? "cursor-pointer" : "cursor-default"
-                  )}
-                  aria-label={hasImage ? "업로드된 사진 보기" : "빈 슬롯"}
-                >
-                  {hasImage ? (
-                    <div className="relative h-full w-full">
-                      <img
-                        src={upload.url}
-                        alt="업로드 이미지"
-                        className="h-full w-full object-contain bg-white border"
-                      />
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDeleteUpload(upload.id);
-                        }}
-                        className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-white/90 text-gray-700"
-                        aria-label="업로드 이미지 삭제"
-                      >
-                        <FiTrash2 size={12} />
-                      </button>
-                    </div>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 text-center text-sm text-gray-500 shadow-sm">
-        <div className="mb-3 text-left text-sm font-semibold text-gray-700">멘토 피드백</div>
-        이곳에 멘토 피드백이 기록됩니다.
-      </section>
-
-      <div className="flex items-center justify-center gap-3 pt-2">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="rounded-full border border-violet-400 bg-white px-6 py-2.5 text-sm font-extrabold text-violet-600"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
         >
-          취소
+          <FiChevronLeft />
+          과제로 돌아가기
         </button>
-        <button
-          type="button"
-          className="rounded-full bg-violet-600 px-6 py-2.5 text-sm font-extrabold text-white"
-        >
-          저장
-        </button>
-      </div>
-      </div>
-      <ModalBase open={uploadOpen} onClose={() => setUploadOpen(false)}>
-      <div className="w-full rounded-3xl bg-white p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)] sm:w-[360px]">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-800">사진 업로드</div>
+
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-gray-400">
+              {formatKoreanDate(parseDateKey(task.date))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-500"
+              >
+                <FiDownload size={12} />
+                과제 다운로드(PDF)
+              </button>
+              <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", status.className)}>
+                {status.label}
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
+              {task.subject}
+            </span>
+            <div className="text-lg font-bold text-gray-900">{task.title}</div>
+          </div>
+
+        </section>
+
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-gray-700">학습 점검하기</div>
+            <button
+              type="button"
+              onClick={() => setUploadOpen(true)}
+              className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-500"
+            >
+              사진 업로드
+            </button>
+          </div>
+          <div className="mt-2 flex flex-col items-center gap-3 text-center text-sm text-gray-500">
+            <div className="grid w-full grid-cols-3 gap-3 pt-2">
+              {[...uploads, ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const }))].map((upload, index) => {
+                const hasImage = !!upload;
+                return (
+                  <button
+                    key={`upload-${upload.id}`}
+                    type="button"
+                    onClick={() => {
+                      if (!hasImage) return;
+                      setActivePinId(null);
+                      setActiveImageIndex(index);
+                      setDetailOpen(true);
+                    }}
+                    className={cn(
+                      "btn-none aspect-[3/4] w-full overflow-hidden bg-transparent p-0 outline-none focus:outline-none focus-visible:outline-none",
+                      hasImage ? "cursor-pointer" : "cursor-default"
+                    )}
+                    aria-label={hasImage ? "업로드된 사진 보기" : "빈 슬롯"}
+                  >
+                    {hasImage ? (
+                      <div className="relative h-full w-full">
+                        <img
+                          src={upload.url}
+                          alt="업로드 이미지"
+                          className="h-full w-full object-contain bg-white border"
+                        />
+                        {"pending" in upload && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeletePending(upload.id as string);
+                            }}
+                            className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-white/90 text-gray-700"
+                            aria-label="임시 업로드 삭제"
+                          >
+                            <FiTrash2 size={12} />
+                          </button>
+                        )}
+                        {"pending" in upload && (
+                          <span className="absolute left-1 top-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                            임시
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 text-center text-sm text-gray-500 shadow-sm">
+          <div className="mb-3 text-left text-sm font-semibold text-gray-700">멘토 피드백</div>
+          이곳에 멘토 피드백이 기록됩니다.
+        </section>
+
+        <div className="flex items-center justify-center gap-3 pt-2">
           <button
             type="button"
-            onClick={() => setUploadOpen(false)}
-            className="grid place-items-center rounded-full hover:bg-gray-100"
-            aria-label="닫기"
-          >
-            <FiX />
-          </button>
-        </div>
-        <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-500">
-          JPG 또는 PNG 파일을 선택하세요.
-        </div>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(event) => handleUpload(event.target.files?.[0])}
-          className="mt-3 w-full text-xs text-gray-500 file:mr-3 file:rounded-full file:border-0 file:bg-violet-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-violet-600"
-          disabled={isUploading}
-        />
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setUploadOpen(false)}
-            className="rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-600"
-            disabled={isUploading}
+            onClick={() => navigate(-1)}
+            className="rounded-full border border-violet-400 bg-white px-6 py-2.5 text-sm font-extrabold text-violet-600"
           >
             취소
           </button>
           <button
             type="button"
-            onClick={() => setUploadOpen(false)}
+            onClick={handleSaveTask}
+            disabled={isSavingTask}
             className={cn(
-              "rounded-full px-4 py-2 text-xs font-semibold text-white",
-              isUploading ? "bg-violet-300" : "bg-violet-600"
+              "rounded-full px-6 py-2.5 text-sm font-extrabold text-white",
+              isSavingTask ? "bg-violet-300" : "bg-violet-600"
             )}
-            disabled={isUploading}
           >
-            {isUploading ? "업로드 중..." : "업로드"}
+            {isSavingTask ? "저장 중..." : "저장"}
           </button>
         </div>
       </div>
-    </ModalBase>
+      <ModalBase open={uploadOpen} onClose={() => setUploadOpen(false)}>
+        <div className="w-full rounded-3xl bg-white p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)] sm:w-[360px]">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-gray-800">사진 업로드</div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFile(null);
+                setUploadOpen(false);
+              }}
+              className="grid place-items-center rounded-full hover:bg-gray-100"
+              aria-label="닫기"
+            >
+              <FiX />
+            </button>
+          </div>
+          <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-500">
+            JPG 또는 PNG 파일을 선택하세요. (임시 업로드)
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+            className="mt-3 w-full text-xs text-gray-500 file:mr-3 file:rounded-full file:border-0 file:bg-violet-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-violet-600"
+            disabled={isUploading}
+          />
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFile(null);
+                setUploadOpen(false);
+              }}
+              className="rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-600"
+              disabled={isUploading}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={handleUpload}
+              className={cn(
+                "rounded-full px-4 py-2 text-xs font-semibold text-white",
+                isUploading || !selectedFile ? "bg-violet-300" : "bg-violet-600"
+              )}
+              disabled={isUploading || !selectedFile}
+            >
+              {isUploading ? "업로드 중..." : "업로드"}
+            </button>
+
+          </div>
+        </div>
+      </ModalBase>
       <ModalBase open={detailOpen} onClose={() => setDetailOpen(false)}>
         <div className="w-full rounded-3xl bg-white p-4 shadow-[0_18px_40px_rgba(0,0,0,0.16)] sm:w-[360px]">
           <div className="flex items-center justify-between relative z-10">
@@ -315,17 +408,25 @@ export default function MenteeTaskDetailPage() {
               과제로 돌아가기
             </button>
             <div className="flex items-center gap-2">
-              {uploads[activeImageIndex] && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteUpload(uploads[activeImageIndex].id)}
-                  className="flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm"
-                  aria-label="업로드 이미지 삭제"
-                  title="삭제"
-                >
-                  <FiTrash2 size={16} className="text-gray-700" />
-                </button>
-              )}
+              {(() => {
+                const list = [
+                  ...uploads,
+                  ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const })),
+                ] as Array<{ id: number | string; url: string; pending?: true }>;
+                const current = list[activeImageIndex];
+                if (!current || !("pending" in current)) return null;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePending(current.id as string)}
+                    className="flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm"
+                    aria-label="임시 업로드 삭제"
+                    title="삭제"
+                  >
+                    <FiTrash2 size={16} className="text-gray-700" />
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 onClick={() => setShowPins((prev) => !prev)}
@@ -343,9 +444,9 @@ export default function MenteeTaskDetailPage() {
           </div>
           <div className="mt-3 overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-3">
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gray-100">
-              {uploads[activeImageIndex] ? (
+              {([...uploads, ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const }))] as Array<{ id: number | string; url: string; pending?: true }>)[activeImageIndex] ? (
                 <img
-                  src={uploads[activeImageIndex].url}
+                  src={([...uploads, ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const }))] as Array<{ id: number | string; url: string; pending?: true }>)[activeImageIndex].url}
                   alt="상세 피드백 이미지"
                   className="absolute inset-0 h-full w-full object-contain bg-white"
                 />
@@ -360,48 +461,48 @@ export default function MenteeTaskDetailPage() {
               )}
               {showPins &&
                 feedbackPins.map((pin) => {
-                const isSelected = activePinId === pin.id;
-                const fillClass = isSelected ? "fill-violet-600" : "fill-black/70";
-                const textClass = isSelected ? "text-violet-700" : "text-violet-700";
+                  const isSelected = activePinId === pin.id;
+                  const fillClass = isSelected ? "fill-violet-600" : "fill-black/70";
+                  const textClass = isSelected ? "text-violet-700" : "text-violet-700";
 
-                return (
-                  <button
-                    key={`detail-pin-${pin.id}`}
-                    type="button"
-                    onClick={() => setActivePinId((prev) => (prev === pin.id ? null : pin.id))}
-                    style={{ left: pin.left, top: pin.top }}
-                    aria-label={`피드백 코멘트 ${pin.id}`}
-                    className={cn(
-                      "btn-none",
-                      "appearance-none",
-                      "bg-transparent hover:bg-transparent active:bg-transparent",
-                      "outline-none ring-0 focus:outline-none focus:ring-0",
-                      "absolute -translate-x-1/2 -translate-y-[90%]",
-                      "transition-transform duration-200 hover:scale-110",
-                      isSelected ? "z-30 scale-110" : "z-20"
-                    )}
-                  >
-                    <span className="relative block h-11 w-10">
-                      <svg viewBox="0 0 24 24" className="h-full w-full" aria-hidden>
-                        <path
-                          d="M12 2C7.58 2 4 5.58 4 10c0 5.25 6.35 11.58 7.59 12.78a.6.6 0 0 0 .82 0C13.65 21.58 20 15.25 20 10c0-4.42-3.58-8-8-8z"
-                          className={cn("transition-colors duration-150", fillClass)}
-                        />
-                      </svg>
-                      <span
-                        className={cn(
-                          "pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2",
-                          "flex h-6 min-w-6 items-center justify-center rounded-full px-1",
-                          "bg-white text-[12px] font-extrabold leading-none shadow-[0_1px_2px_rgba(0,0,0,0.25)]",
-                          textClass
-                        )}
-                      >
-                        {pin.id}
+                  return (
+                    <button
+                      key={`detail-pin-${pin.id}`}
+                      type="button"
+                      onClick={() => setActivePinId((prev) => (prev === pin.id ? null : pin.id))}
+                      style={{ left: pin.left, top: pin.top }}
+                      aria-label={`피드백 코멘트 ${pin.id}`}
+                      className={cn(
+                        "btn-none",
+                        "appearance-none",
+                        "bg-transparent hover:bg-transparent active:bg-transparent",
+                        "outline-none ring-0 focus:outline-none focus:ring-0",
+                        "absolute -translate-x-1/2 -translate-y-[90%]",
+                        "transition-transform duration-200 hover:scale-110",
+                        isSelected ? "z-30 scale-110" : "z-20"
+                      )}
+                    >
+                      <span className="relative block h-11 w-10">
+                        <svg viewBox="0 0 24 24" className="h-full w-full" aria-hidden>
+                          <path
+                            d="M12 2C7.58 2 4 5.58 4 10c0 5.25 6.35 11.58 7.59 12.78a.6.6 0 0 0 .82 0C13.65 21.58 20 15.25 20 10c0-4.42-3.58-8-8-8z"
+                            className={cn("transition-colors duration-150", fillClass)}
+                          />
+                        </svg>
+                        <span
+                          className={cn(
+                            "pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2",
+                            "flex h-6 min-w-6 items-center justify-center rounded-full px-1",
+                            "bg-white text-[12px] font-extrabold leading-none shadow-[0_1px_2px_rgba(0,0,0,0.25)]",
+                            textClass
+                          )}
+                        >
+                          {pin.id}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })}
             </div>
           </div>
           <div className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-xs text-gray-700">

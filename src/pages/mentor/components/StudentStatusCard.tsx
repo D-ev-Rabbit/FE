@@ -19,15 +19,13 @@ interface StudentStatusCardProps {
 }
 
 export default function StudentStatusCard({
-  studentName,
-  periodLabel = "Today",
   items,
   onClick,
   className,
 }: StudentStatusCardProps) {
   return (
     <div
-        role={onClick ? "button" : undefined}
+      role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onKeyDown={(e) => {
@@ -40,43 +38,35 @@ export default function StudentStatusCard({
         className
       )}
     >
-        <div className="w-full max-w-xl rounded-2xl bg-white ">
-        <div className="flex items-start justify-between">
-            <div>
-            <p className="mt-1 text-sm text-muted-foreground">{studentName}</p>
-            <p className="mt-1 text-xs text-muted-foreground">* 클릭하면 자세한 정보를 볼 수 있습니다.</p>
-            </div>
-
-            <div className="rounded-md border px-4 py-2 text-sm text-muted-foreground">
-            {periodLabel}
-            </div>
-        </div>
-
+      <div className="w-full max-w-xl rounded-2xl bg-white ">
         <div className="mt-6 space-y-6">
-            {items.map((it) => {
+          {items.map((it) => {
             const pct =
-                it.total <= 0 ? 0 : Math.min(100, Math.max(0, (it.current / it.total) * 100));
+              it.total <= 0 ? 0 : Math.min(100, Math.max(0, (it.current / it.total) * 100));
 
             return (
-                <div key={it.label} className="space-y-2">
+              <div key={it.label} className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{it.label}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <p className="text-sm font-medium">{it.label}</p>
+                  <p className="text-sm text-muted-foreground">
                     {it.current}/{it.total}
-                    </p>
+                  </p>
                 </div>
 
                 <div className={`h-2 w-full rounded-full ${it.trackClassName}`}>
-                    <div
+                  <div
                     className={`h-2 rounded-full ${it.barClassName}`}
                     style={{ width: `${pct}%` }}
-                    />
+                  />
                 </div>
-                </div>
+              </div>
             );
-            })}
+          })}
         </div>
+        <div>
+          <p className="mt-3 text-xs text-right text-muted-foreground">* 클릭하면 자세한 정보를 볼 수 있습니다.</p>
         </div>
+      </div>
     </div>
   );
 }

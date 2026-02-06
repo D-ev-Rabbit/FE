@@ -13,9 +13,7 @@ export default function ActionCard({ label, onClick, iconLeft }: ActionCardProps
       onClick={onClick}
       className="group flex flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md"
     >
-      <div className="text-xs font-bold text-violet-500">토픽</div>
-
-      <div className="mt-1 text-sm font-semibold text-gray-900">{label}</div>
+      <div className="mt-1 text-sm font-semibold text-violet-500">{label}</div>
 
       <div className="mt-3 h-px w-full bg-gray-100" />
 

@@ -61,13 +61,12 @@ export default function MenteesPage() {
         <div className="text-base font-extrabold text-violet-900">멘티 관리</div>
         <div className="mt-2 text-sm text-gray-500">멘티별 현황을 확인 할 수 있어요.</div>
       </div>
-      <div className="mb-5">
-        <div className="text-sm font-extrabold text-gray-900">멘티 목록</div>
-      </div>
 
-      <div className="grid items-start gap-12 lg:grid-cols-[1fr_420px]">
-        {/* 멘티 리스트 */}
-        <section className="w-full ">
+      <div className="grid items-start gap-12 lg:grid-cols-2">
+        <aside className="w-full space-y-4">
+          {/* 멘티 리스트 */}
+        <section className="w-full">
+          <div className="text-sm font-extrabold text-gray-900 pb-4 pt-4">멘티 목록</div>
           <MenteeList
             rows={mentees.map((m) => ({
               id: String(m.id),
@@ -79,9 +78,12 @@ export default function MenteesPage() {
             onSelect={handleSelect}
           />
         </section>
+        </aside>
+        
 
         {/* 오른쪽 aside */}
         <aside className="w-full space-y-4 p-4">
+          <div className="text-sm font-extrabold text-gray-900">현황</div>
           {/* 날짜 + 버튼 */}
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -89,7 +91,7 @@ export default function MenteesPage() {
                 <FaRegCalendar />
               </span>
               <span>
-                {selectedDate.toLocaleDateString("en-US", {
+                {selectedDate.toLocaleDateString("KR", {
                   weekday: "long",
                   year: "numeric",
                   month: "long",
@@ -103,7 +105,7 @@ export default function MenteesPage() {
               onClick={() => setCalendarOpen((prev) => !prev)}
               className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50"
             >
-              Today
+              날짜 선택
             </button>
 
             {/* 캘린더 팝업 */}

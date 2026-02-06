@@ -1,18 +1,18 @@
-import { axiosInstance } from "@/api/axiosInstance";
-import type { FileUploadResponse } from "@/types/file";
+import { uploadAxios } from "@/api/uploadAxios";
+
+export type FileUploadResponse = {
+  id: number;
+  todoId: number;
+  url: string;
+  type: "PDF" | "IMG" | "ETC";
+  creatorId: number;
+};
 
 export const fileApi = {
-  // POST /api/files/upload/{todoId}
   uploadFile: (todoId: number, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    return axiosInstance.post<FileUploadResponse>(
-      `/api/files/upload/${todoId}`,
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
+    return uploadAxios.post<FileUploadResponse>(`/api/files/upload/${todoId}`, formData);
   },
 };

@@ -8,7 +8,12 @@ type Props = {
   mode: "create" | "edit"
   initial?: TodoItem | null
   onClose: () => void
-  onSave: (payload: { title: string; date: string; subject: TodoItem["subject"] }) => void
+  onSave: (payload: {
+    title: string;
+    date: string;
+    subject: TodoItem["subject"];
+    file?: File | null;
+  }) => void
   onDelete?: () => void
 }
 
@@ -188,7 +193,7 @@ export default function TodoEditModal({ open, mode, initial, onClose, onSave, on
             <button
               type="button"
               disabled={!canSave}
-              onClick={() => onSave({ title: title.trim(), date, subject })}
+              onClick={() => onSave({ title: title.trim(), date, subject, file: selectedFile })}
               className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40"
             >
               저장

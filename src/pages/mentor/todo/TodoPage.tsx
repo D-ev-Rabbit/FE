@@ -13,6 +13,7 @@ import type { MentorTodo } from "@/types/mentorTodo";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import { mentorPlannerApi } from "@/api/mentor/planner";
+import { fileApi } from "@/api/file";
 
 export default function MentorTodoPage(){
   const [mentees, setMentees] = useState<MentorMentee[]>([]);
@@ -170,7 +171,17 @@ export default function MentorTodoPage(){
     setEditOpen(true)
   }
   //저장 로직
-  const saveTodo = ({ title, date, subject }: { title: string; date: string; subject: TodoItem["subject"] }) => {
+  const saveTodo = ({
+    title,
+    date,
+    subject,
+    file,
+  }: {
+    title: string;
+    date: string;
+    subject: TodoItem["subject"];
+    file?: File | null;
+  }) => {
     if (!selectedMenteeId) return;
     if (editMode === "create") {
       mentorTodoApi.createTodo(Number(selectedMenteeId), {
@@ -180,7 +191,18 @@ export default function MentorTodoPage(){
         goal: "",
         isCompleted: false,
       })
-        .then(() => {
+        .then(async (res) => {
+          if (file) {
+            try {
+              await fileApi.uploadFile(res.data.id, file);
+            } catch (err) {
+              setErrorModal({
+                open: true,
+                title: "파일 업로드 실패",
+                description: getErrorMessage(err, "과제 파일 업로드에 실패했어요. 잠시 후 다시 시도해주세요."),
+              });
+            }
+          }
           refreshTodos();
           setEditOpen(false);
         })
@@ -473,7 +495,7 @@ export default function MentorTodoPage(){
         <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl">
           <div className="text-lg font-bold text-gray-900">오늘의 플래너 피드백</div>
           <div className="mt-2 text-xs text-gray-500">
-            선택한 날짜({selectedDateStr})에 대한 코멘트를 남겨주세요.
+            선택한 날짜({selectedDateStr})에 대한 코멘트를 남겨주세요. 새롭게 피드백한 내용으로 업데이트됩니다.
           </div>
           <textarea
             value={commentText}
