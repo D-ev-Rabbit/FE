@@ -9,6 +9,7 @@ import {
   FaChevronRight,
   FaInfoCircle,
 } from "react-icons/fa";
+import type { MentorMenteeSummary, MentorSummarySubject } from "@/types/mentor";
 
 type Subject = "국어" | "영어" | "수학";
 
@@ -22,9 +23,10 @@ type Props = {
   onNextSubject?: () => void;
   onSelectSubject?: (s: Subject) => void;
 
-  avgStudyTimeText: string;
-  minTaskAchievementRate: number;
-  feedbackResponseRate: number;
+  avgStudyTimeText?: string;
+  minTaskAchievementRate?: number;
+  feedbackResponseRate?: number;
+  summary?: MentorMenteeSummary | null;
 };
 
 type Metric = {
@@ -189,18 +191,44 @@ export default function StudentStatusDetailModal({
   onPrevSubject,
   onNextSubject,
   onSelectSubject,
-  avgStudyTimeText,
-  minTaskAchievementRate,
-  feedbackResponseRate,
+  avgStudyTimeText = "0M",
+  minTaskAchievementRate = 0,
+  feedbackResponseRate = 0,
+  summary,
 }: Props) {
   const [index, setIndex] = useState(0);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
-  const cards: SubjectCard[] = useMemo(
-    () => [
-      {
-        key: "국어",
-        pill: "국어",
+  const formatStudyTimeCaps = (seconds: number) => {
+    const totalMinutes = Math.max(0, Math.round(seconds / 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const remain = totalMinutes % 60;
+    if (hours === 0) return `${remain}M`;
+    if (remain === 0) return `${hours}H`;
+    return `${hours}H ${remain}M`;
+  };
+
+  const formatRate = (value: number) => {
+    const pct = Number.isFinite(value) ? Math.round(value * 100) : 0;
+    return `${Math.max(0, Math.min(100, pct))}%`;
+  };
+
+  const subjectLabel = (key: string): Subject => {
+    if (key === "KOREAN") return "국어";
+    if (key === "ENGLISH") return "영어";
+    if (key === "MATH") return "수학";
+    return (key as Subject) ?? "국어";
+  };
+
+  const subjectOrder: Subject[] = ["국어", "영어", "수학"];
+  const subjectKeyByLabel = (label: Subject) =>
+    label === "국어" ? "KOREAN" : label === "영어" ? "ENGLISH" : "MATH";
+
+  const cards: SubjectCard[] = useMemo(() => {
+    if (!summary?.subjects) {
+      return subjectOrder.map((s) => ({
+        key: s,
+        pill: s,
         metrics: [
           {
             id: "studyTime",
@@ -236,16 +264,21 @@ export default function StudentStatusDetailModal({
             ),
           },
         ],
-      },
-      // 영어/수학도 같은 구조로(값은 동일하게 둠 — 나중에 과목별 데이터 연결)
-      {
-        key: "영어",
-        pill: "영어",
+      }));
+    }
+
+    const subjects = summary.subjects;
+    const ordered = subjectOrder.map((s) => {
+      const raw = subjects[subjectKeyByLabel(s)] ?? subjects[s];
+      const metric = raw as MentorSummarySubject | undefined;
+      return {
+        key: s,
+        pill: s,
         metrics: [
           {
             id: "studyTime",
             label: "설스터디와 함께한 학습 시간",
-            valueText: avgStudyTimeText,
+            valueText: formatStudyTimeCaps(metric?.totalStudySeconds ?? 0),
             helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
@@ -255,9 +288,9 @@ export default function StudentStatusDetailModal({
           },
           {
             id: "taskDone",
-            label: "멘토가 낸 최소 과제 달성률",
-            valueText: `${minTaskAchievementRate}%`,
-            helpText: "멘토가 설정한 최소 기준을 충족한 과제의 비율입니다.",
+            label: "멘토가 낸 과제 달성률",
+            valueText: formatRate(metric?.todoCompletionRate ?? 0),
+            helpText: "멘토가 낸 과제를 달성한 비율입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
                 <FaCheckCircle size={18} />
@@ -267,7 +300,7 @@ export default function StudentStatusDetailModal({
           {
             id: "feedbackChecked",
             label: "멘토 피드백 응답률",
-            valueText: `${feedbackResponseRate}%`,
+            valueText: formatRate(metric?.feedbackReadRate ?? 0),
             helpText: "멘토 피드백에 대해 확인/응답한 비율입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
@@ -276,49 +309,63 @@ export default function StudentStatusDetailModal({
             ),
           },
         ],
-      },
-      {
-        key: "수학",
-        pill: "수학",
-        metrics: [
-          {
-            id: "studyTime",
-            label: "설스터디와 함께한 학습 시간",
-            valueText: avgStudyTimeText,
-            helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
-                <FaRegClock size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "taskDone",
-            label: "멘토가 낸 최소 과제 달성률",
-            valueText: `${minTaskAchievementRate}%`,
-            helpText: "멘토가 설정한 최소 기준을 충족한 과제의 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
-                <FaCheckCircle size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "feedbackChecked",
-            label: "멘토 피드백 응답률",
-            valueText: `${feedbackResponseRate}%`,
-            helpText: "멘토 피드백에 대해 확인/응답한 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
-                <FaBookOpen size={18} />
-              </div>
-            ),
-          },
-        ],
-      },
-    ],
-    [avgStudyTimeText, minTaskAchievementRate, feedbackResponseRate]
-  );
+      } as SubjectCard;
+    });
+
+    const rest = Object.entries(subjects)
+      .filter(([key]) => {
+        const label = subjectLabel(key);
+        const keyUpper = key.toUpperCase();
+        if (subjectOrder.includes(label)) return false;
+        if (keyUpper === "KOREAN" || keyUpper === "ENGLISH" || keyUpper === "MATH") return false;
+        return true;
+      })
+      .map(([key, value]) => {
+        const pill = subjectLabel(key);
+        const metric = value as MentorSummarySubject;
+        return {
+          key: pill,
+          pill,
+          metrics: [
+            {
+              id: "studyTime",
+              label: "설스터디와 함께한 학습 시간",
+              valueText: formatStudyTimeCaps(metric?.totalStudySeconds ?? 0),
+              helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
+                  <FaRegClock size={18} />
+                </div>
+              ),
+            },
+            {
+              id: "taskDone",
+              label: "멘토가 낸 과제 달성률",
+              valueText: formatRate(metric?.todoCompletionRate ?? 0),
+              helpText: "멘토가 낸 과제를 달성한 비율입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+                  <FaCheckCircle size={18} />
+                </div>
+              ),
+            },
+            {
+              id: "feedbackChecked",
+              label: "멘토 피드백 응답률",
+              valueText: formatRate(metric?.feedbackReadRate ?? 0),
+              helpText: "멘토 피드백에 대해 확인/응답한 비율입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
+                  <FaBookOpen size={18} />
+                </div>
+              ),
+            },
+          ],
+        } as SubjectCard;
+      });
+
+    return [...ordered, ...rest];
+  }, [summary, avgStudyTimeText, minTaskAchievementRate, feedbackResponseRate]);
 
   // 외부 subject prop이 있으면 그걸 우선해서 인덱스 동기화
   useEffect(() => {
