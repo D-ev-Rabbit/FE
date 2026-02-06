@@ -1,32 +1,36 @@
 import { cn } from "@/shared/lib/cn";
 import { HiOutlineX } from "react-icons/hi";
-import type { Notice, NoticeCategory } from "./types";
+import type { Notice } from "./types";
 import { mockNotices } from "./mock";
-import { FiBookOpen, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { FiBookOpen, FiAlertCircle, FiMessageSquare, FiFileText } from "react-icons/fi";
 import type React from "react";
+import type { NotificationType } from "@/types/notification";
 
-const categoryMeta: Record<NoticeCategory, { label: string }> = {
-  task_feedback: { label: "과제 피드백" },
-  planner_feedback: { label: "플래너 피드백" },
-  task_missing: { label: "과제 미제출" },
+const typeMeta: Record<NotificationType, { label: string }> = {
+  TODO_COMMENT: { label: "과제 코멘트" },
+  FILE_FEEDBACK: { label: "파일 피드백" },
+  PLANNER_COMMENT: { label: "플래너 피드백" },
+  TODO_INCOMPLETE: { label: "과제 미제출" },
 };
 
-const categoryStyle: Record<
-  NoticeCategory,
+const typeStyle: Record<
+  NotificationType,
   { bg: string; Icon: React.ComponentType<{ className?: string }> }
 > = {
-  task_feedback: { bg: "bg-violet-500", Icon: FiCheckCircle },
-  planner_feedback: { bg: "bg-green-500", Icon: FiBookOpen },
-  task_missing: { bg: "bg-red-500", Icon: FiAlertCircle },
+  TODO_COMMENT: { bg: "bg-violet-500", Icon: FiMessageSquare },
+  FILE_FEEDBACK: { bg: "bg-indigo-500", Icon: FiFileText },
+  PLANNER_COMMENT: { bg: "bg-green-500", Icon: FiBookOpen },
+  TODO_INCOMPLETE: { bg: "bg-red-500", Icon: FiAlertCircle },
 };
 
-function groupByCategory(list: Notice[]) {
-  const grouped: Record<NoticeCategory, Notice[]> = {
-    task_feedback: [],
-    planner_feedback: [],
-    task_missing: [],
+function groupByType(list: Notice[]) {
+  const grouped: Record<NotificationType, Notice[]> = {
+    TODO_COMMENT: [],
+    FILE_FEEDBACK: [],
+    PLANNER_COMMENT: [],
+    TODO_INCOMPLETE: [],
   };
-  list.forEach((n) => grouped[n.category].push(n));
+  list.forEach((n) => grouped[n.type].push(n));
   return grouped;
 }
 
@@ -47,12 +51,14 @@ export default function NotificationPopup({
 }: Props) {
   if (!open) return null;
 
-  const grouped = groupByCategory(notices);
+  const grouped = groupByType(notices);
+  const totalCount = notices.length;
 
-  const orderedCategories: NoticeCategory[] = [
-    "task_feedback",
-    "planner_feedback",
-    "task_missing",
+  const orderedTypes: NotificationType[] = [
+    "TODO_COMMENT",
+    "FILE_FEEDBACK",
+    "PLANNER_COMMENT",
+    "TODO_INCOMPLETE",
   ];
 
   return (
@@ -90,61 +96,68 @@ export default function NotificationPopup({
 
         {/* content */}
         <div className="max-h-[56vh] overflow-y-auto px-5 py-4">
-          <div className="space-y-7">
-            {orderedCategories.map((cat) => {
-              const list = grouped[cat];
-              if (list.length === 0) return null;
+          {totalCount === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="mb-2 text-sm font-semibold text-gray-800">새 알림이 없어요</div>
+              <div className="text-xs text-gray-500">도착하면 여기에서 확인할 수 있어요</div>
+            </div>
+          ) : (
+            <div className="space-y-7">
+              {orderedTypes.map((type) => {
+                const list = grouped[type];
+                if (list.length === 0) return null;
 
-              const meta = categoryMeta[cat];
+                const meta = typeMeta[type];
 
-              return (
-                <div key={cat}>
-                  {/* section title */}
-                  <div className="mb-2.5 flex items-center gap-2 text-xs font-bold text-gray-800">
-                    <span>{meta.label}</span>
-                    <span className="text-[11px] font-semibold text-gray-400">
-                      {list.length}
-                    </span>
+                return (
+                  <div key={type}>
+                    {/* section title */}
+                    <div className="mb-2.5 flex items-center gap-2 text-xs font-bold text-gray-800">
+                      <span>{meta.label}</span>
+                      <span className="text-[11px] font-semibold text-gray-400">
+                        {list.length}
+                      </span>
+                    </div>
+
+                    {/* items */}
+                    <ul className="space-y-3">
+                      {list.map((n) => {
+                        const { bg, Icon } = typeStyle[n.type];
+
+                        return (
+                          <li key={n.id ?? `${n.type}-${n.title}-${n.timeLabel}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onNoticeClick?.(n); 
+                                onClose();
+                              }}
+                              className={cn(
+                                "btn-none w-full text-left",
+                                "flex items-center gap-3 rounded-2xl bg-gray-50 px-1 py-3",
+                                "hover:bg-gray-100 active:bg-gray-100"
+                              )}
+                            >
+                              {/* circle icon */}
+                              <div className={cn("flex h-9 w-9 items-center justify-center rounded-full", bg)}>
+                                <Icon className="h-4.5 w-4.5 text-white" />
+                              </div>
+
+                              {/* text */}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-gray-900">{n.title}</p>
+                                <p className="mt-1 text-xs text-gray-500">{n.timeLabel}</p>
+                              </div>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
-
-                  {/* items */}
-                  <ul className="space-y-3">
-                    {list.map((n) => {
-                      const { bg, Icon } = categoryStyle[n.category];
-
-                      return (
-                        <li key={n.id ?? `${n.category}-${n.title}-${n.timeLabel}`}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onNoticeClick?.(n); 
-                              onClose();
-                            }}
-                            className={cn(
-                              "btn-none w-full text-left",
-                              "flex items-center gap-3 rounded-2xl bg-gray-50 px-4 py-3",
-                              "hover:bg-gray-100 active:bg-gray-100"
-                            )}
-                          >
-                            {/* circle icon */}
-                            <div className={cn("flex h-9 w-9 items-center justify-center rounded-full", bg)}>
-                              <Icon className="h-4.5 w-4.5 text-white" />
-                            </div>
-
-                            {/* text */}
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-gray-900">{n.title}</p>
-                              <p className="mt-1 text-xs text-gray-500">{n.timeLabel}</p>
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="h-3" />
         </div>

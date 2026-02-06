@@ -1,8 +1,8 @@
-export type NoticeCategory = "task_feedback" | "planner_feedback" | "task_missing";
+import type { NotificationType } from "@/types/notification";
 
 export type Notice = {
   id?: string;
-  category: NoticeCategory;
+  type: NotificationType;
   title: string;
   timeLabel: string;
 };
