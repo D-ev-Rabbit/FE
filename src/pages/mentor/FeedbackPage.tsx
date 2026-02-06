@@ -4,6 +4,8 @@ import type { Submission } from "@/widgets/mentor-feedback/types";
 import { cn } from "@/shared/lib/cn";
 import MenteeCard from "@/shared/ui/card/MenteeCard";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { mentorMenteeApi } from "@/api/mentor/mentees";
+import type { MentorMentee } from "@/types/mentor";
 
 const mock: Submission[] = [
   {
@@ -92,16 +94,48 @@ type Mentee = {
 };
 
 export default function FeedbackPage() {
-  const mentees = useMemo<Mentee[]>(() => {
-    const map = new Map<string, Mentee>();
-    for (const s of mock) {
-      const key = s.menteeName;
-      const prev = map.get(key);
-      if (!prev) map.set(key, { key, menteeName: s.menteeName, gradeLabel: s.gradeLabel, submissions: [s] });
-      else prev.submissions.push(s);
-    }
-    return Array.from(map.values());
+  const [rawMentees, setRawMentees] = useState<MentorMentee[]>([]);
+
+  useEffect(() => {
+    let ignore = false;
+    mentorMenteeApi.getMentees()
+      .then((res) => {
+        if (ignore) return;
+        setRawMentees(res.data ?? []);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setRawMentees([]);
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
+
+  const mentees = useMemo<Mentee[]>(() => {
+    const byName = new Map<string, Submission[]>();
+    for (const s of mock) {
+      const list = byName.get(s.menteeName) ?? [];
+      list.push(s);
+      byName.set(s.menteeName, list);
+    }
+
+    if (rawMentees.length === 0) {
+      return Array.from(byName.entries()).map(([name, submissions]) => ({
+        key: name,
+        menteeName: name,
+        gradeLabel: submissions[0]?.gradeLabel ?? "",
+        submissions,
+      }));
+    }
+
+    return rawMentees.map((m) => ({
+      key: String(m.id),
+      menteeName: m.name,
+      gradeLabel: `고등학교 ${m.grade}학년`,
+      submissions: byName.get(m.name) ?? [],
+    }));
+  }, [rawMentees]);
 
   const [selectedMenteeKey, setSelectedMenteeKey] = useState<string | null>(null);
   const selectedMentee = useMemo(
@@ -136,6 +170,13 @@ export default function FeedbackPage() {
     setSelectedSubmission(null);
     setPage(0);
   };
+
+  useEffect(() => {
+    if (mentees.length === 0) return;
+    if (!selectedMenteeKey) {
+      setSelectedMenteeKey(mentees[0].key);
+    }
+  }, [mentees, selectedMenteeKey]);
 
   // 화면 크기에 따라 "한 줄에 보이는 카드 개수" 자동 계산
   useEffect(() => {

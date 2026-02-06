@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import { FaRegCalendar, FaPen } from "react-icons/fa";
 
-import { MenteeRows, StatusByMenteeId } from "./mentees/data/mock";
+import { mentorMenteeApi } from "@/api/mentor/mentees";
+import type { MentorMentee } from "@/types/mentor";
 import ActionCard from "./components/ActionCard";
 
 import MenteeList from "./components/MenteeList";
@@ -40,22 +41,37 @@ const todos: Todo[] = [
 export default function MentorTasksPage() {
   const navigate = useNavigate();
 
-  const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(
-    MenteeRows[0]?.id ?? null
-  );
+  const [mentees, setMentees] = useState<MentorMentee[]>([]);
+  const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
 
-  const selectedStatus = selectedMenteeId ? StatusByMenteeId[selectedMenteeId] : null;
-
-  // 더미데이터 가져오기
   const selectedStudent = useMemo(() => {
     if (!selectedMenteeId) return null;
-    return MenteeRows.find((x) => x.id === selectedMenteeId) ?? null;
-  }, [selectedMenteeId]);
+    return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
+  }, [selectedMenteeId, mentees]);
 
   const handleSelect = (row: MenteeRowData) => {
     setSelectedMenteeId(row.id);
   };
+
+  useEffect(() => {
+    let ignore = false;
+    mentorMenteeApi.getMentees()
+      .then((res) => {
+        if (ignore) return;
+        setMentees(res.data ?? []);
+        if ((res.data ?? []).length > 0) {
+          setSelectedMenteeId(String(res.data[0].id));
+        }
+      })
+      .catch(() => {
+        if (ignore) return;
+        setMentees([]);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -92,7 +108,12 @@ export default function MentorTasksPage() {
             {/* 멘티 리스트 */}
             <section className="w-full ">
               <MenteeList
-                rows={MenteeRows}
+                rows={mentees.map((m) => ({
+                  id: String(m.id),
+                  name: m.name,
+                  school: m.school,
+                  grade: `고등학교 ${m.grade}학년`,
+                }))}
                 selectedId={selectedMenteeId}
                 onSelect={handleSelect}
               />
