@@ -13,6 +13,7 @@ type Props = {
   onToggleDone?: (id: number) => void
   onClickRow?: (item: TodoItem) => void
   className?: string
+  onClickItem?: (todo: TodoItem) => void;
 }
 
 const subjectLabel = (s: TodoItem["subject"]) =>
@@ -32,19 +33,8 @@ export default function TodoListTable({ items, onToggleDone, onClickRow, classNa
           <ul className="divide-y divide-gray-100">
             {items.map((t) => (
               <li key={t.id} className="px-5 py-4">
-                <div className="flex items-start gap-3">
-                  {/* 체크 */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleDone?.(t.id)}
-                    className={clsx(
-                      "mt-0.5 h-10 w-3 shrink-0 rounded border transition",
-                      t.done ? "bg-violet-600 border-violet-600" : "bg-white border-gray-300"
-                    )}
-                    aria-label={t.done ? "완료 해제" : "완료로 변경"}
-                  >
-                    {t.done && <span className="block h-full w-full text-center text-[12px] leading-5 text-white">✓</span>}
-                  </button>
+                <div className="flex items-start gap-3 ">
+                  
 
                   {/* 텍스트 */}
                   <button

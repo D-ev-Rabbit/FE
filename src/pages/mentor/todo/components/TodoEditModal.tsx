@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import ModalBase from "@/shared/ui/modal/ModalBase"
 import type { TodoItem } from "./TodoListTable"
+import { FiUpload } from "react-icons/fi"
 
 type Props = {
   open: boolean
@@ -21,14 +22,23 @@ export default function TodoEditModal({ open, mode, initial, onClose, onSave, on
   const [date, setDate] = useState(defaultDate)
   const [subject, setSubject] = useState<TodoItem["subject"]>(initial?.subject ?? "KOREAN")
 
+  // ✅ 파일 선택 상태
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+
   useEffect(() => {
     if (!open) return
     setTitle(initial?.title ?? "")
     setDate(initial?.date ?? defaultDate)
     setSubject(initial?.subject ?? "KOREAN")
+
+    // ✅ 모달 열릴 때마다 파일 선택 초기화
+    setSelectedFile(null)
   }, [open, initial, defaultDate])
 
   const canSave = title.trim().length > 0 && date.length === 10
+
+  const openFilePicker = () => fileRef.current?.click()
 
   return (
     <ModalBase open={open} onClose={onClose}>
@@ -68,36 +78,90 @@ export default function TodoEditModal({ open, mode, initial, onClose, onSave, on
               onChange={(e) => setDate(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-violet-400"
             />
-            {/* 과목 */}
-            <div>
-            <div className="mb-2 text-sm font-semibold text-gray-700 pt-6">과목</div>
-            <div className="flex gap-2">
-                {([
-                ["KOREAN", "국어"],
-                ["ENGLISH", "영어"],
-                ["MATH", "수학"],
-                ] as const).map(([key, label]) => {
+          </label>
+
+          {/* 과목 */}
+          <div>
+            <div className="mb-2 text-sm font-semibold text-gray-700 pt-2">과목</div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["KOREAN", "국어"],
+                  ["ENGLISH", "영어"],
+                  ["MATH", "수학"],
+                ] as const
+              ).map(([key, label]) => {
                 const active = subject === key
                 return (
-                    <button
+                  <button
                     key={key}
                     type="button"
                     onClick={() => setSubject(key)}
                     className={[
-                        "h-10 rounded-full border px-4 text-sm font-semibold transition",
-                        active
+                      "h-10 rounded-full border px-4 text-sm font-semibold transition",
+                      active
                         ? "border-violet-600 bg-violet-50 text-violet-700"
                         : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
                     ].join(" ")}
                     aria-pressed={active}
-                    >
+                  >
                     {label}
-                    </button>
+                  </button>
                 )
-                })}
+              })}
             </div>
+          </div>
+
+          {/* ✅ 파일 업로드(선택) UI */}
+          <div>
+            <div className="mb-2 text-sm font-semibold text-gray-700 pt-2">과제 파일</div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={openFilePicker}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 sm:w-auto"
+              >
+                <FiUpload className="h-4 w-4" />
+                파일 선택
+              </button>
+
+              {/* 파일명 표시 칸 */}
+              <div
+                className={[
+                  "w-full flex-1 rounded-xl border px-4 py-3 text-sm",
+                  selectedFile ? "border-gray-200 text-gray-900" : "border-dashed border-gray-200 text-gray-400",
+                ].join(" ")}
+              >
+                {selectedFile ? selectedFile.name : "선택된 파일 없음"}
+              </div>
+
+              {selectedFile && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 sm:w-auto"
+                >
+                  제거
+                </button>
+              )}
+
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null
+                  setSelectedFile(file)
+                  e.currentTarget.value = "" // 같은 파일 재선택 가능
+                }}
+              />
             </div>
-          </label>
+
+            <p className="mt-2 text-xs text-gray-400">
+              {/* * 파일 업로드 API 연결은 다음 단계에서 저장 후(todo_id 생성) 진행. */}
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3">
