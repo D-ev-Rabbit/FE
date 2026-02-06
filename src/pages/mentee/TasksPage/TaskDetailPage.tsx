@@ -1,11 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiDownload, FiUpload, FiChevronLeft, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiDownload, FiChevronLeft, FiEye, FiEyeOff, FiTrash2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
-import { createTaskData, findTaskById } from "./data/mock";
 import { formatKoreanDate, parseDateKey } from "./utils/date";
 import { cn } from "@/shared/lib/cn";
 import ModalBase from "@/shared/ui/modal/ModalBase";
+import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
+import { fileApi } from "@/api/file";
+import type { FileUploadResponse } from "@/types/file";
+import axios from "axios";
+import { getMenteeTodo } from "@/api/mentee/todo";
+import type { MenteeTodo } from "@/types/planner";
 
 const statusConfig = {
   done: {
@@ -21,17 +26,54 @@ const statusConfig = {
 export default function MenteeTaskDetailPage() {
   const navigate = useNavigate();
   const params = useParams();
-  const baseDate = useMemo(() => new Date(), []);
-  const { tasksByDate } = useMemo(() => createTaskData(baseDate), [baseDate]);
-
   const taskId = Number(params.taskId);
-  const task = Number.isNaN(taskId) ? null : findTaskById(tasksByDate, taskId);
+  const [task, setTask] = useState<MenteeTodo | null>(null);
+  const [isLoadingTask, setIsLoadingTask] = useState(false);
+  const [taskError, setTaskError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [activePinId, setActivePinId] = useState<number | null>(null);
   const [showPins, setShowPins] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [uploads, setUploads] = useState<Array<{ id: number; url: string }>>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{
+    open: boolean;
+    variant: "success" | "error" | "info";
+    title: string;
+    description?: string;
+  }>({ open: false, variant: "info", title: "" });
+
+  useEffect(() => {
+    if (Number.isNaN(taskId)) return;
+    setIsLoadingTask(true);
+    setTaskError(null);
+    getMenteeTodo(taskId)
+      .then((res) => setTask(res.data))
+      .catch(() => {
+        setTask(null);
+        setTaskError("과제를 찾을 수 없습니다.");
+      })
+      .finally(() => setIsLoadingTask(false));
+  }, [taskId]);
+
+  if (isLoadingTask) {
+    return (
+      <div className="space-y-4 pb-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
+        >
+          <FiChevronLeft />
+          과제로 돌아가기
+        </button>
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+          과제를 불러오는 중입니다.
+        </div>
+      </div>
+    );
+  }
 
   if (!task) {
     return (
@@ -45,18 +87,52 @@ export default function MenteeTaskDetailPage() {
           과제로 돌아가기
         </button>
         <div className="rounded-3xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
-          과제를 찾을 수 없습니다.
+          {taskError ?? "과제를 찾을 수 없습니다."}
         </div>
       </div>
     );
   }
 
-  const status = statusConfig[task.status];
-  const handleUpload = (file?: File | null) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setUploads((prev) => [...prev, { id: Date.now(), url }]);
-    setUploadOpen(false);
+  const status = statusConfig[task.isCompleted ? "done" : "pending"];
+  const handleUpload = async (file?: File | null) => {
+    if (!file || !task) return;
+    setIsUploading(true);
+    try {
+      const res = await fileApi.uploadFile(task.id, file);
+      const data: FileUploadResponse = res.data;
+      setUploads((prev) => [...prev, { id: data.id, url: data.url }]);
+      setUploadOpen(false);
+      setUploadResult({
+        open: true,
+        variant: "success",
+        title: "업로드 완료",
+        description: "사진이 정상적으로 업로드되었습니다.",
+      });
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? `${error.response?.data?.message ?? "업로드 실패"} (${error.response?.status ?? "네트워크 오류"})`
+        : "업로드 실패";
+      setUploadResult({
+        open: true,
+        variant: "error",
+        title: "업로드 실패",
+        description: message,
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  const handleDeleteUpload = (id: number) => {
+    setUploads((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      const next = prev.filter((item) => item.id !== id);
+      if (activeImageIndex >= next.length) {
+        setActiveImageIndex(Math.max(0, next.length - 1));
+      }
+      if (next.length === 0) setDetailOpen(false);
+      return next;
+    });
   };
   const feedbackPins = [
     { id: 1, left: "70%", top: "20%", text: "문단 첫 문장에 주어-서술어 호응 체크" },
@@ -78,7 +154,7 @@ export default function MenteeTaskDetailPage() {
       <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="text-xs text-gray-400">
-            {formatKoreanDate(parseDateKey(task.dateKey))}
+            {formatKoreanDate(parseDateKey(task.date))}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -95,7 +171,7 @@ export default function MenteeTaskDetailPage() {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
-            {task.subjectLabel}
+            {task.subject}
           </span>
           <div className="text-lg font-bold text-gray-900">{task.title}</div>
         </div>
@@ -113,7 +189,7 @@ export default function MenteeTaskDetailPage() {
             사진 업로드
           </button>
         </div>
-        <div className="mt-6 flex flex-col items-center gap-3 text-center text-sm text-gray-500">
+        <div className="mt-2 flex flex-col items-center gap-3 text-center text-sm text-gray-500">
           <div className="grid w-full grid-cols-3 gap-3 pt-2">
             {uploads.map((upload, index) => {
               const hasImage = !!upload;
@@ -138,8 +214,19 @@ export default function MenteeTaskDetailPage() {
                       <img
                         src={upload.url}
                         alt="업로드 이미지"
-                        className="h-full w-full object-contain bg-white"
+                        className="h-full w-full object-contain bg-white border"
                       />
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteUpload(upload.id);
+                        }}
+                        className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-white/90 text-gray-700"
+                        aria-label="업로드 이미지 삭제"
+                      >
+                        <FiTrash2 size={12} />
+                      </button>
                     </div>
                   ) : null}
                 </button>
@@ -177,7 +264,7 @@ export default function MenteeTaskDetailPage() {
           <button
             type="button"
             onClick={() => setUploadOpen(false)}
-            className="grid h-8 w-8 place-items-center rounded-full hover:bg-gray-100"
+            className="grid place-items-center rounded-full hover:bg-gray-100"
             aria-label="닫기"
           >
             <FiX />
@@ -191,28 +278,34 @@ export default function MenteeTaskDetailPage() {
           accept="image/*"
           onChange={(event) => handleUpload(event.target.files?.[0])}
           className="mt-3 w-full text-xs text-gray-500 file:mr-3 file:rounded-full file:border-0 file:bg-violet-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-violet-600"
+          disabled={isUploading}
         />
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => setUploadOpen(false)}
             className="rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-600"
+            disabled={isUploading}
           >
             취소
           </button>
           <button
             type="button"
             onClick={() => setUploadOpen(false)}
-            className="rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white"
+            className={cn(
+              "rounded-full px-4 py-2 text-xs font-semibold text-white",
+              isUploading ? "bg-violet-300" : "bg-violet-600"
+            )}
+            disabled={isUploading}
           >
-            업로드
+            {isUploading ? "업로드 중..." : "업로드"}
           </button>
         </div>
       </div>
     </ModalBase>
       <ModalBase open={detailOpen} onClose={() => setDetailOpen(false)}>
         <div className="w-full rounded-3xl bg-white p-4 shadow-[0_18px_40px_rgba(0,0,0,0.16)] sm:w-[360px]">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between relative z-10">
             <button
               type="button"
               onClick={() => setDetailOpen(false)}
@@ -221,15 +314,32 @@ export default function MenteeTaskDetailPage() {
               <FiChevronLeft />
               과제로 돌아가기
             </button>
-            <button
-              type="button"
-              onClick={() => setShowPins((prev) => !prev)}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm"
-              aria-label={showPins ? "코멘트 숨기기" : "코멘트 보이기"}
-              title={showPins ? "코멘트 숨기기" : "코멘트 보이기"}
-            >
-              {showPins ? <FiEye size={16} /> : <FiEyeOff size={16} />}
-            </button>
+            <div className="flex items-center gap-2">
+              {uploads[activeImageIndex] && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteUpload(uploads[activeImageIndex].id)}
+                  className="flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm"
+                  aria-label="업로드 이미지 삭제"
+                  title="삭제"
+                >
+                  <FiTrash2 size={16} className="text-gray-700" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPins((prev) => !prev)}
+                className="flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm"
+                aria-label={showPins ? "코멘트 숨기기" : "코멘트 보이기"}
+                title={showPins ? "코멘트 숨기기" : "코멘트 보이기"}
+              >
+                {showPins ? (
+                  <FiEye size={16} className="text-gray-700" />
+                ) : (
+                  <FiEyeOff size={16} className="text-gray-700" />
+                )}
+              </button>
+            </div>
           </div>
           <div className="mt-3 overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-3">
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gray-100">
@@ -302,6 +412,16 @@ export default function MenteeTaskDetailPage() {
           </div>
         </div>
       </ModalBase>
+
+      <ConfirmModal
+        open={uploadResult.open}
+        variant={uploadResult.variant}
+        title={uploadResult.title}
+        description={uploadResult.description}
+        showCancel={false}
+        onCancel={() => setUploadResult({ open: false, variant: "info", title: "" })}
+        onConfirm={() => setUploadResult({ open: false, variant: "info", title: "" })}
+      />
     </>
   );
 }

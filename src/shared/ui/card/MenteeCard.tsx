@@ -47,7 +47,7 @@ export default function MenteeCard({
 
           {/* 학년/이름 */}
           <div className="mt-5">
-            <div className="text-sm text-gray-500">{grade}</div>
+            <div className="text-sm text-gray-500">고등학교 {grade}학년</div>
             <div className="mt-2 text-base font-bold text-gray-900">{name}</div>
           </div>
         </>

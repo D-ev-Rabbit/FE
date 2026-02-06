@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import { FaRegCalendar, FaPen, FaTasks } from "react-icons/fa";
-import { MenteeRows, StatusByMenteeId } from "./data/mock";
+import { mentorMenteeApi } from "@/api/mentor/mentees";
+import type { MentorMentee } from "@/types/mentor";
 import StudentStatusCard from "@/pages/mentor/components/StudentStatusCard";
 import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
 import ActionCard from "../components/ActionCard";
@@ -15,18 +16,34 @@ import CalendarPopover from "../components/CalendarPopover";
 export default function MenteesPage() {
   const navigate = useNavigate();
 
-  const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(
-    MenteeRows[0]?.id ?? null
-  );
+  const [mentees, setMentees] = useState<MentorMentee[]>([]);
+  const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
 
-  const selectedStatus = selectedMenteeId ? StatusByMenteeId[selectedMenteeId] : null;
 
-  // 더미데이터 가져오기
+  useEffect(() => {
+    let ignore = false;
+    mentorMenteeApi.getMentees()
+      .then((res) => {
+        if (ignore) return;
+        setMentees(res.data ?? []);
+        if ((res.data ?? []).length > 0) {
+          setSelectedMenteeId(String(res.data[0].id));
+        }
+      })
+      .catch(() => {
+        if (ignore) return;
+        setMentees([]);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const selectedStudent = useMemo(() => {
     if (!selectedMenteeId) return null;
-    return MenteeRows.find((x) => x.id === selectedMenteeId) ?? null;
-  }, [selectedMenteeId]);
+    return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
+  }, [selectedMenteeId, mentees]);
 
   const handleSelect = (row: MenteeRowData) => {
     setSelectedMenteeId(row.id);
@@ -36,10 +53,6 @@ export default function MenteesPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    setCalendarOpen(false);
-  };
 
   return (
     <div className="w-full">
@@ -51,7 +64,12 @@ export default function MenteesPage() {
         {/* 멘티 리스트 */}
         <section className="w-full ">
           <MenteeList
-            rows={MenteeRows}
+            rows={mentees.map((m) => ({
+              id: String(m.id),
+              name: m.name,
+              school: m.school,
+              grade: `고등학교 ${m.grade}학년`,
+            }))}
             selectedId={selectedMenteeId}
             onSelect={handleSelect}
           />
@@ -104,30 +122,30 @@ export default function MenteesPage() {
 
           {/* 현황 카드 */}
           <div className="rounded-3xl bg-white">
-            {selectedStudent && selectedStatus ? (
+            {selectedStudent ? (
               <>
                 <StudentStatusCard
-                  studentName={`${selectedStudent.grade} · ${selectedStudent.name}`}
+                  studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
                   periodLabel="Today"
                   items={[
                     {
                       label: "To do",
-                      current: selectedStatus.todo[0],
-                      total: selectedStatus.todo[1],
+                      current: 0,
+                      total: 0,
                       barClassName: "bg-green-500",
                       trackClassName: "bg-green-100",
                     },
                     {
                       label: "제출파일",
-                      current: selectedStatus.submit[0],
-                      total: selectedStatus.submit[1],
+                      current: 0,
+                      total: 0,
                       barClassName: "bg-purple-500",
                       trackClassName: "bg-purple-100",
                     },
                     {
                       label: "피드백 작성 완료",
-                      current: selectedStatus.feedbackDone[0],
-                      total: selectedStatus.feedbackDone[1],
+                      current: 0,
+                      total: 0,
                       barClassName: "bg-blue-500",
                       trackClassName: "bg-blue-100",
                     },
@@ -137,7 +155,7 @@ export default function MenteesPage() {
 
                 <ModalBase open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
                   <StudentStatusDetailModal
-                    studentName={`${selectedStudent.grade} · ${selectedStudent.name}`}
+                    studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
                     open={statusModalOpen}
                     onClose={() => setStatusModalOpen(false)}
                     avgStudyTimeText="90H 45M"

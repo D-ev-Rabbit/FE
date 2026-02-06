@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddTaskModal from "./components/AddTaskModal";
 import DatePickerModal from "./components/DatePickerModal";
 import DailyNoteModal from "./components/DailyNoteModal";
@@ -10,10 +11,31 @@ import WeeklyView from "./components/WeeklyView";
 import useCalendarState from "./hooks/useCalendarState";
 import { buildMonthGrid, formatMonthLabel } from "./utils/date";
 
+import { createMenteeTodo, deleteMenteeTodo, getMenteeTodos, patchMenteeTodo } from "@/api/mentee/todo";
+import type { MenteeTodo, SubjectGroup } from "@/types/planner";
+import { menteeStudySessionApi } from "@/api/mentee/studySession";
+import type { StudySession } from "@/types/studySession";
+
 export default function MenteeCalendarPage() {
+  const navigate = useNavigate();
+  const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(() => new Date());
+  const toDateKey = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const addDays = (dateKey: string, days: number) => {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + days);
+    return toDateKey(dt);
+  };
+
   const {
     currentDate,
     currentDateKey,
@@ -59,7 +81,6 @@ export default function MenteeCalendarPage() {
     setDailyNoteText,
     toggleSubject,
     openAddTask,
-    addTask,
     goToPrevDay,
     goToNextDay,
     goToPrevMonth,
@@ -67,12 +88,8 @@ export default function MenteeCalendarPage() {
     selectDateFromMonth,
     openTaskActions,
     toggleTaskDone,
-    deleteTask,
     openTaskEdit,
-    saveTaskEdit,
     openTaskDate,
-    saveTaskDate,
-    moveTaskToTomorrow,
     goToPrevWeek,
     goToNextWeek,
     openAddGoal,
@@ -82,9 +99,280 @@ export default function MenteeCalendarPage() {
     toggleGoalDone,
     deleteGoal,
     getTasksForDate,
-    getSubjectsForDate,
     saveDailyNote,
   } = useCalendarState();
+
+
+  const [todos, setTodos] = useState<MenteeTodo[]>([]);
+  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
+  const [weeklySessionsByDate, setWeeklySessionsByDate] = useState<Record<string, StudySession[]>>(
+    {}
+  );
+
+  const [openSubjectsUI, setOpenSubjectsUI] = useState<Record<string, boolean>>({});
+  const subjectsForSelectedDate = useMemo(
+    () => mapTodosToSubjectGroups(todos, DEFAULT_SUBJECTS),
+    [todos]
+  );
+
+  const studyMinutesBySubject = useMemo(() => {
+    const record: Record<string, number> = {};
+    for (const session of studySessions) {
+      const minutes = Math.max(1, Math.ceil(session.durationSeconds / 60));
+      record[session.subject] = (record[session.subject] ?? 0) + minutes;
+    }
+    return record;
+  }, [studySessions]);
+
+  const totalStudyMinutes = useMemo(
+    () => Object.values(studyMinutesBySubject).reduce((acc, cur) => acc + cur, 0),
+    [studyMinutesBySubject]
+  );
+
+  const weeklyTotalStudyMinutes = useMemo(() => {
+    let total = 0;
+    for (const key of Object.keys(weeklySessionsByDate)) {
+      for (const session of weeklySessionsByDate[key] ?? []) {
+        total += Math.max(1, Math.ceil(session.durationSeconds / 60));
+      }
+    }
+    return total;
+  }, [weeklySessionsByDate]);
+
+  // subjects 바뀌면 전부 열림(true)으로
+  useEffect(() => {
+    setOpenSubjectsUI((prev) => {
+      const next = { ...prev };
+      for (const s of subjectsForSelectedDate) {
+        if (next[s.id] === undefined) next[s.id] = true; // 기본 true
+      }
+      return next;
+    });
+  }, [subjectsForSelectedDate]);
+
+  const toggleSubjectUI = (id: string) => {
+    setOpenSubjectsUI((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const openTaskDetail = (taskId: string) => {
+    navigate(`/mentee/tasks/${taskId}`);
+  };
+
+  useEffect(() => {
+    refetchTodos(currentDateKey).catch(console.error);
+  }, [currentDateKey]);
+
+  useEffect(() => {
+    menteeStudySessionApi.getByDate(currentDateKey)
+      .then((res) => setStudySessions(res.data))
+      .catch(() => setStudySessions([]));
+  }, [currentDateKey]);
+
+  useEffect(() => {
+    let ignore = false;
+    const fetchWeek = async () => {
+      const entries = await Promise.all(
+        weekDays.map(async (day) => {
+          const key = toDateKey(day);
+          try {
+            const res = await menteeStudySessionApi.getByDate(key);
+            return [key, res.data as StudySession[]] as const;
+          } catch {
+            return [key, [] as StudySession[]] as const;
+          }
+        })
+      );
+      if (ignore) return;
+      const next: Record<string, StudySession[]> = {};
+      for (const [key, sessions] of entries) {
+        next[key] = sessions ?? [];
+      }
+      setWeeklySessionsByDate(next);
+    };
+
+    fetchWeek();
+    return () => {
+      ignore = true;
+    };
+  }, [weekDays]);
+
+  const handleCreateTodo = async () => {
+    try {
+      const title = taskDraftText.trim();
+      if (!title) return;
+      if (!selectedSubject) return;
+
+      await createMenteeTodo({
+        title,
+        date: currentDateKey,          //  선택된 날짜
+        subject: selectedSubject,      //  모달에서 선택된 과목명
+        goal: "",
+        isCompleted: false,
+      });
+
+      //  모달 닫고 입력 초기화
+      setIsModalOpen(false);
+      setTaskDraftText("");
+
+      //  다시 조회해서 화면 갱신(가장 안전)
+      await refetchTodos(currentDateKey);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+
+  const refetchTodos = async (date: string) => {
+    const res = await getMenteeTodos({ date });
+    setTodos(res.data);
+  };
+
+  // 완료 토글 (PATCH는 전체 바디 필요)
+  const handleToggleTodoDone = async (_subjectId: string, taskId: string) => {
+    // taskId는 String(todo.id)였으니 number로 변환
+    const todoId = Number(taskId);
+    if (Number.isNaN(todoId)) return;
+
+    // 현재 todo 찾기
+    const found = todos.find((t) => t.id === todoId);
+    if (!found) return;
+
+    // 1) UI 먼저 즉시 반영(낙관적 업데이트)
+    setTodos((prev) =>
+      prev.map((t) => (t.id === todoId ? { ...t, isCompleted: !t.isCompleted } : t))
+    );
+
+    // 2) 서버 PATCH
+    try {
+      await patchMenteeTodo(todoId, {
+        title: found.title,
+        date: found.date,
+        subject: found.subject,
+        goal: "",
+        isCompleted: !found.isCompleted,
+      });
+    } catch (e) {
+      // 실패하면 롤백
+      console.error(e);
+      setTodos((prev) =>
+        prev.map((t) => (t.id === todoId ? { ...t, isCompleted: found.isCompleted } : t))
+      );
+    }
+  };
+
+
+  //  삭제
+  const handleDeleteTodo = async (task: SubjectGroup["tasks"][number]) => {
+    await deleteMenteeTodo(task.todoId);
+    await refetchTodos(currentDateKey);
+  };
+
+  //  수정(제목 수정) - TaskActionModal의 saveTaskEdit에 연결할 예정
+  const handleEditTodoTitle = async (task: SubjectGroup["tasks"][number], nextTitle: string) => {
+    const todo = todos.find((t) => t.id === task.todoId);
+    if (!todo) return;
+
+    const title = nextTitle.trim();
+    if (!title) return;
+
+    await patchMenteeTodo(todo.id, {
+      title,
+      date: todo.date,
+      subject: todo.subject,
+      goal: todo.goal ?? "",
+      isCompleted: todo.isCompleted,
+    });
+
+    await refetchTodos(currentDateKey);
+  };
+
+  const updateTodo = async (todoId: number, patch: { date?: string }) => {
+    const found = todos.find((t) => t.id === todoId);
+    if (!found) return;
+
+    //  1) UI 먼저 반영
+    const prevTodo = found;
+    setTodos((prev) =>
+      prev.map((t) => (t.id === todoId ? { ...t, ...patch } : t))
+    );
+
+    //  2) 서버 PATCH (백엔드가 full body 요구하는 케이스 대비)
+    try {
+      await patchMenteeTodo(todoId, {
+        title: prevTodo.title,
+        date: patch.date ?? prevTodo.date,
+        subject: prevTodo.subject,
+        goal: "",
+        isCompleted: prevTodo.isCompleted,
+      });
+
+      // 날짜 이동이면 현재 날짜의 리스트가 바뀌니까 다시 조회(안전)
+      await refetchTodos(currentDateKey);
+    } catch (e) {
+      console.error(e);
+      // 실패 롤백
+      setTodos((prev) =>
+        prev.map((t) => (t.id === todoId ? prevTodo : t))
+      );
+    }
+  };
+
+  const handleMoveTodoToTomorrow = async (_subjectId: string, taskId: string) => {
+    const todoId = Number(taskId);
+    if (Number.isNaN(todoId)) return;
+
+    const found = todos.find((t) => t.id === todoId);
+    if (!found) return;
+
+    const tomorrow = addDays(found.date, 1);
+    await updateTodo(todoId, { date: tomorrow });
+
+    // 모달 닫기(너 코드에 맞게)
+    setTaskActionOpen(false);
+  };
+  const handleChangeTodoDate = async (_subjectId: string, taskId: string, newDateKey: string) => {
+    const todoId = Number(taskId);
+    if (Number.isNaN(todoId)) return;
+
+    await updateTodo(todoId, { date: newDateKey });
+
+    // 모달 닫기(너 코드에 맞게)
+    setTaskDateOpen(false);
+    setTaskActionOpen(false);
+  };
+
+
+  function mapTodosToSubjectGroups(
+    todos: MenteeTodo[],
+    baseSubjects: readonly string[] = DEFAULT_SUBJECTS
+  ): SubjectGroup[] {
+    // 1) 기본 과목을 먼저 만들어 둠 (할 일 없어도 표시되게)
+    const bySubject = new Map<string, SubjectGroup>();
+    for (const name of baseSubjects) {
+      bySubject.set(name, { id: name, name, tasks: [] });
+    }
+
+    // 2) todo를 subject별로 밀어넣기 (기본 과목 외 subject도 자동 추가)
+    for (const todo of todos) {
+      const key = todo.subject || "기타";
+      if (!bySubject.has(key)) {
+        bySubject.set(key, { id: key, name: key, tasks: [] });
+      }
+
+      bySubject.get(key)!.tasks.push({
+        id: String(todo.id),
+        todoId: todo.id,
+        title: todo.title,
+        done: todo.isCompleted,
+        time: "0m",
+        dateKey: todo.date,
+      });
+    }
+
+    return Array.from(bySubject.values());
+  }
+
+
 
   const scrollToTop = () => {
     const scrollTarget = document.querySelector("main");
@@ -92,7 +380,6 @@ export default function MenteeCalendarPage() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   };
 
-  const subjectsForSelectedDate = getSubjectsForDate(currentDate);
   const pickerLabel = useMemo(() => formatMonthLabel(pickerMonth), [pickerMonth]);
   const pickerGrid = useMemo(() => buildMonthGrid(pickerMonth), [pickerMonth]);
 
@@ -140,39 +427,36 @@ export default function MenteeCalendarPage() {
   return (
     <div className="space-y-5 pb-6">
       <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setViewMode("daily")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
-              viewMode === "daily"
-                ? "bg-violet-600 text-white"
-                : "border border-gray-300 bg-white text-gray-400"
+        <button
+          type="button"
+          onClick={() => setViewMode("daily")}
+          className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${viewMode === "daily"
+            ? "bg-violet-600 text-white"
+            : "border border-gray-300 bg-white text-gray-400"
             }`}
-          >
-            일일
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("monthly")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
-              viewMode === "monthly"
-                ? "bg-violet-600 text-white"
-                : "border border-gray-300 bg-white text-gray-400"
+        >
+          일일
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("monthly")}
+          className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${viewMode === "monthly"
+            ? "bg-violet-600 text-white"
+            : "border border-gray-300 bg-white text-gray-400"
             }`}
-          >
-            월간
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("weekly")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${
-              viewMode === "weekly"
-                ? "bg-violet-600 text-white"
-                : "border border-gray-300 bg-white text-gray-400"
+        >
+          월간
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("weekly")}
+          className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow ${viewMode === "weekly"
+            ? "bg-violet-600 text-white"
+            : "border border-gray-300 bg-white text-gray-400"
             }`}
-          >
-            주간
-          </button>
+        >
+          주간
+        </button>
       </div>
 
       {viewMode === "monthly" && (
@@ -183,6 +467,8 @@ export default function MenteeCalendarPage() {
           todayLabel={todayLabel}
           monthGoals={monthGoals}
           subjects={subjectsForSelectedDate}
+          studyMinutesBySubject={studyMinutesBySubject}
+          totalStudyMinutes={totalStudyMinutes}
           openSubjects={openSubjects}
           onPrevMonth={goToPrevMonth}
           onNextMonth={goToNextMonth}
@@ -195,6 +481,7 @@ export default function MenteeCalendarPage() {
           onToggleTaskDone={toggleTaskDone}
           onOpenTaskActions={openTaskActions}
           getTasksForDate={getTasksForDate}
+          onOpenTaskDetail={openTaskDetail}
           onGoDaily={() => {
             setViewMode("daily");
             requestAnimationFrame(scrollToTop);
@@ -218,6 +505,7 @@ export default function MenteeCalendarPage() {
           weekDays={weekDays}
           currentDate={currentDate}
           subjects={subjectsForSelectedDate}
+          weekTotalStudyMinutes={weeklyTotalStudyMinutes}
           openSubjects={openSubjects}
           getTasksForDate={getTasksForDate}
           onPrevWeek={goToPrevWeek}
@@ -227,6 +515,7 @@ export default function MenteeCalendarPage() {
           onAddTask={openAddTask}
           onToggleTaskDone={toggleTaskDone}
           onOpenTaskActions={openTaskActions}
+          onOpenTaskDetail={openTaskDetail}
           onGoDaily={() => {
             setViewMode("daily");
             requestAnimationFrame(scrollToTop);
@@ -241,8 +530,10 @@ export default function MenteeCalendarPage() {
           doneCount={doneCount}
           totalCount={totalCount}
           dailyNoteText={dailyNoteText}
-          subjects={dailySubjects}   /* ✅ 필터된 데이터 */
-          openSubjects={openSubjects}
+          subjects={subjectsForSelectedDate} //  API 기반 subjects
+          studyMinutesBySubject={studyMinutesBySubject}
+          totalStudyMinutes={totalStudyMinutes}
+          openSubjects={openSubjectsUI}      //  우리가 만든 토글 상태
           onPrevDay={goToPrevDay}
           onNextDay={goToNextDay}
           onOpenDatePicker={() => {
@@ -252,12 +543,14 @@ export default function MenteeCalendarPage() {
           onOpenDailyNote={() => setDailyNoteOpen(true)}
           onGoMonthly={() => setViewMode("monthly")}
           onOpenRecord={() => setRecordOpen(true)}
-          onToggleSubject={toggleSubject}
+          onToggleSubject={toggleSubjectUI}  //  우리가 만든 토글 함수
           onAddTask={openAddTask}
-          onToggleTaskDone={toggleTaskDone}
+          onToggleTaskDone={handleToggleTodoDone} //  PATCH 연결
           onOpenTaskActions={openTaskActions}
+          onOpenTaskDetail={openTaskDetail}
         />
       )}
+
 
       <AddTaskModal
         open={isModalOpen}
@@ -265,32 +558,64 @@ export default function MenteeCalendarPage() {
         selectedSubject={selectedSubject}
         taskDraftText={taskDraftText}
         onChangeTaskDraftText={setTaskDraftText}
-        onAddTask={addTask}
+        onAddTask={handleCreateTodo}
       />
+
 
       <TaskActionModal
         open={taskActionOpen}
         onClose={() => setTaskActionOpen(false)}
         activeTask={activeTask}
-        onDelete={() => {
+        onDelete={async () => {
           if (!activeTask) return;
-          deleteTask(activeTask.subjectId, activeTask.task.id);
+
+          const task = subjectsForSelectedDate
+            .find((s) => s.id === activeTask.subjectId)
+            ?.tasks.find((t) => t.id === activeTask.task.id);
+
+          if (!task) return;
+
+          await handleDeleteTodo(task);
           setTaskActionOpen(false);
         }}
         onOpenEdit={openTaskEdit}
         onOpenDate={openTaskDate}
-        onMoveTomorrow={moveTaskToTomorrow}
+        onMoveTomorrow={() => {
+          if (!activeTask) return;
+          handleMoveTodoToTomorrow(activeTask.subjectId, activeTask.task.id);
+        }}
+
         taskEditOpen={taskEditOpen}
         taskDraftTitle={taskDraftTitle}
         onChangeTaskDraftTitle={setTaskDraftTitle}
-        onSaveTaskEdit={saveTaskEdit}
+        onSaveTaskEdit={async () => {
+          if (!activeTask) return;
+
+          const task = subjectsForSelectedDate
+            .find((s) => s.id === activeTask.subjectId)
+            ?.tasks.find((t) => t.id === activeTask.task.id);
+
+          if (!task) return;
+
+          await handleEditTodoTitle(task, taskDraftTitle);
+          setTaskEditOpen(false);
+          setTaskActionOpen(false);
+        }}
         onCloseTaskEdit={() => setTaskEditOpen(false)}
+
+        // 날짜/내일로/시간설정은 API 스펙 더 보고 다음으로!
         taskDateOpen={taskDateOpen}
         taskDraftDate={taskDraftDate}
         onChangeTaskDraftDate={setTaskDraftDate}
-        onSaveTaskDate={saveTaskDate}
+        onSaveTaskDate={() => {
+          if (!activeTask) return;
+          // taskDraftDate가 "YYYY-MM-DD" 형태라고 가정
+          handleChangeTodoDate(activeTask.subjectId, activeTask.task.id, taskDraftDate);
+        }}
+
         onCloseTaskDate={() => setTaskDateOpen(false)}
       />
+
 
       <DailyNoteModal
         open={dailyNoteOpen}

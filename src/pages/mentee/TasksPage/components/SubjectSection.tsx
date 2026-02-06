@@ -12,7 +12,7 @@ export default function SubjectSection({ section }: SubjectSectionProps) {
         {section.label}
       </div>
       {section.tasks.length === 0 ? (
-        <div className="min-h-[160px] rounded-3xl border border-gray-200 bg-white p-6 text-sm text-gray-400 shadow-sm">
+        <div className="min-h-[70px] rounded-3xl border border-gray-200 bg-white p-6 text-sm text-gray-400 shadow-sm">
           등록된 과제가 없습니다.
         </div>
       ) : (

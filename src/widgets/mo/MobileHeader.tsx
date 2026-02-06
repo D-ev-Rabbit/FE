@@ -4,6 +4,38 @@ import { FiLogOut } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationPopup from "@/widgets/notifications/NotificationPopup";
+import { menteeNotificationApi } from "@/api/mentee/notification";
+import type { NotificationResponse } from "@/types/notification";
+import type { Notice } from "@/widgets/notifications/types";
+
+function formatRelativeTime(isoString: string) {
+  const createdAt = new Date(isoString);
+  const diffMs = Date.now() - createdAt.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return "방금 전";
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  if (diffDays < 7) return `${diffDays}일 전`;
+
+  const yyyy = createdAt.getFullYear();
+  const mm = String(createdAt.getMonth() + 1).padStart(2, "0");
+  const dd = String(createdAt.getDate()).padStart(2, "0");
+  return `${yyyy}.${mm}.${dd}`;
+}
+
+function toNotice(item: NotificationResponse): Notice {
+  const title = item.subject ? `${item.subject} ${item.message}` : item.message;
+
+  return {
+    id: String(item.id),
+    type: item.type,
+    title,
+    timeLabel: formatRelativeTime(item.createdAt),
+  };
+}
 
 type Props = {
   showLogo?: boolean;
@@ -17,6 +49,7 @@ export default function MobileHeader({
 }: Props) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notices, setNotices] = useState<Notice[]>([]);
 
   const profileRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -34,6 +67,26 @@ export default function MobileHeader({
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [profileOpen]);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+
+    let ignore = false;
+    menteeNotificationApi.getNotifications()
+      .then((res) => {
+        if (ignore) return;
+        const items = res.data.items ?? [];
+        setNotices(items.map(toNotice));
+      })
+      .catch(() => {
+        if (ignore) return;
+        setNotices([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [notifOpen]);
 
   /* 로그아웃 */
   const handleLogout = () => {
@@ -75,11 +128,23 @@ export default function MobileHeader({
             <NotificationPopup
               open={notifOpen}
               onClose={() => setNotifOpen(false)}
+              notices={notices}
               onNoticeClick={(notice) => {
+                if (notice.id) {
+                  menteeNotificationApi.markRead(Number(notice.id))
+                    .then(() => {
+                      setNotices((prev) => prev.filter((n) => n.id !== notice.id));
+                    })
+                    .catch(() => {
+                      // ignore failures to keep UI responsive
+                    });
+                }
+
                 // 예시 라우팅: 카테고리별 상세로 보내기
-                if (notice.category === "task_feedback") navigate("/mentee/tasks");
-                if (notice.category === "planner_feedback") navigate("/mentee/calendar");
-                if (notice.category === "task_missing") navigate("/mentee/tasks");
+                if (notice.type === "TODO_COMMENT") navigate("/mentee/tasks");
+                if (notice.type === "FILE_FEEDBACK") navigate("/mentee/tasks");
+                if (notice.type === "PLANNER_COMMENT") navigate("/mentee/calendar");
+                if (notice.type === "TODO_INCOMPLETE") navigate("/mentee/tasks");
               }}
             />
 

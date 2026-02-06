@@ -3,7 +3,6 @@ import clsx from "clsx";
 export type MenteeRowData = {
   id: string;
   name: string;
-  date: string;
   school: string;
   grade: string;
 };
@@ -26,10 +25,9 @@ export default function MenteeRow({ data, selected, onClick }: Props) {
       )}
     >
       <div className="flex items-center gap-4 min-w-0">
-        {/* 이름 + 날짜 */}
+        {/* 이름 */}
         <div className="min-w-[160px] shrink-0">
           <div className="text-sm font-semibold text-gray-900">{data.name}</div>
-          <div className="text-xs text-gray-400">{data.date}</div>
         </div>
 
         {/* 학교 */}

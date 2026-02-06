@@ -6,7 +6,6 @@ import {
 } from "react-icons/hi2";
 import type { SubjectGroup, Task } from "../types/calendar";
 import { dayLabels, formatMonthLabel } from "../utils/date";
-import { formatStudyTime, parseStudyMinutes } from "../utils/time";
 
 const SUBJECT_BADGE_STYLES: Record<
   string,
@@ -22,7 +21,9 @@ type WeeklyViewProps = {
   weekDays: Date[];
   currentDate: Date;
   subjects: SubjectGroup[];
+  weekTotalStudyMinutes: number;
   openSubjects: Record<string, boolean>;
+  onOpenTaskDetail: (taskId: string) => void;
   getTasksForDate: (date: Date) => (Task & { subject: string })[];
   onPrevWeek: () => void;
   onNextWeek: () => void;
@@ -39,6 +40,7 @@ export default function WeeklyView({
   weekDays,
   currentDate,
   subjects,
+  weekTotalStudyMinutes,
   openSubjects,
   getTasksForDate,
   onPrevWeek,
@@ -49,18 +51,20 @@ export default function WeeklyView({
   onToggleTaskDone,
   onOpenTaskActions,
   onGoDaily,
+  onOpenTaskDetail,
 }: WeeklyViewProps) {
   const monthLabel = formatMonthLabel(weekStart);
   const weekRangeLabel = `${
     weekStart.getMonth() + 1
   }/${weekStart.getDate()} - ${weekDays[6].getMonth() + 1}/${weekDays[6].getDate()}`;
-  const weekTotalMinutes = weekDays.reduce((acc, day) => {
-    const minutes = getTasksForDate(day).reduce(
-      (sum, task) => sum + parseStudyMinutes(task.time),
-      0
-    );
-    return acc + minutes;
-  }, 0);
+  const formatStudyTimeCaps = (minutes: number) => {
+    if (minutes <= 0) return "0M";
+    const hours = Math.floor(minutes / 60);
+    const remain = minutes % 60;
+    if (hours === 0) return `${remain}M`;
+    if (remain === 0) return `${hours}H`;
+    return `${hours}H ${remain}M`;
+  };
 
   return (
     <>
@@ -157,7 +161,7 @@ export default function WeeklyView({
             {monthLabel} · {weekRangeLabel}
           </div>
           <div className="text-sm font-semibold text-gray-900">
-            총 공부시간 {formatStudyTime(weekTotalMinutes)}
+            주간 총 공부시간 {formatStudyTimeCaps(weekTotalStudyMinutes)}
           </div>
         </div>
         {subjects.map((subject, index) => {
@@ -211,27 +215,32 @@ export default function WeeklyView({
                         key={task.id}
                         className="flex items-center justify-between gap-2 text-sm"
                       >
-                        <button
-                          type="button"
-                          onClick={() => onToggleTaskDone(subject.id, task.id)}
-                          className="flex items-center gap-2 bg-transparent p-0 text-left"
-                          aria-label={`${task.title} 완료`}
-                        >
-                          <span
-                            className={`h-3 w-3 rounded-full border ${
-                              task.done
-                                ? "border-violet-500 bg-violet-500"
-                                : "border-gray-300 bg-white"
-                            }`}
-                          />
-                          <span
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onToggleTaskDone(subject.id, task.id)}
+                            className="flex items-center gap-2 bg-transparent p-0 text-left"
+                            aria-label={`${task.title} 완료`}
+                          >
+                            <span
+                              className={`h-3 w-3 rounded-full border ${
+                                task.done
+                                  ? "border-violet-500 bg-violet-500"
+                                  : "border-gray-300 bg-white"
+                              }`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onOpenTaskDetail(String(task.id))}
                             className={
                               task.done ? "text-gray-400 line-through" : "text-gray-900"
                             }
+                            aria-label={`${task.title} 상세보기`}
                           >
                             {task.title}
-                          </span>
-                        </button>
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => onOpenTaskActions(subject.id, task)}

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ModalBase from "@/shared/ui/modal/ModalBase";
-import { HiOutlineChevronDown, HiOutlineEllipsisHorizontal } from "react-icons/hi2";
+import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
+import { HiOutlineChevronDown, HiOutlineClock } from "react-icons/hi2";
 import type { SubjectGroup } from "../types/calendar";
-import { parseStudyMinutes } from "../utils/time";
+import { menteeStudySessionApi } from "@/api/mentee/studySession";
+import type { StudySession } from "@/types/studySession";
 import SubjectRecordModal from "./SubjectRecordModal";
 
 type DailyRecordPageProps = {
@@ -41,6 +43,12 @@ const SUBJECT_COLORS = [
   },
 ];
 
+const SUBJECT_COLOR_BY_NAME: Record<string, (typeof SUBJECT_COLORS)[number]> = {
+  국어: SUBJECT_COLORS[0],
+  영어: SUBJECT_COLORS[1],
+  수학: SUBJECT_COLORS[2],
+};
+
 const formatTimeHHMMSS = (minutes: number, seconds = 0) => {
   const total = Math.max(0, minutes);
   const hours = Math.floor(total / 60);
@@ -59,6 +67,7 @@ type RecordItem = {
   durationMinutes: number;
   startTime: string;
   endTime: string;
+  sessionId?: number;
 };
 
 const formatDurationLabel = (minutes: number) => {
@@ -74,6 +83,62 @@ const formatClock = (date: Date) =>
     "0"
   )}:${String(date.getSeconds()).padStart(2, "0")}`;
 
+const toKstDate = (isoString?: string | null) => {
+  if (!isoString) return null;
+  return new Date(isoString);
+};
+
+const formatClockFromIso = (isoString: string) => {
+  const date = toKstDate(isoString);
+  if (!date || Number.isNaN(date.getTime())) return "00:00:00";
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const hh = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
+  const ss = parts.find((p) => p.type === "second")?.value ?? "00";
+  return `${hh}:${mm}:${ss}`;
+};
+
+const formatLocalDateTime = (date: Date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
+};
+
+const toIsoFromDateTime = (dateKey: string, time: string) => {
+  const [h, min] = time.split(":").map(Number);
+  const hh = String(h ?? 0).padStart(2, "0");
+  const mi = String(min ?? 0).padStart(2, "0");
+  return `${dateKey}T${hh}:${mi}:00`;
+};
+
+const toRecordItem = (session: StudySession): RecordItem => ({
+  id: `session-${session.sessionId}`,
+  sessionId: session.sessionId,
+  subjectId: session.subject,
+  subjectName: session.subject,
+  durationMinutes: Math.max(1, Math.ceil(session.durationSeconds / 60)),
+  startTime: formatClockFromIso(session.startAt),
+  endTime: formatClockFromIso(session.endAt),
+});
+
+const toRecordsByDate = (sessions: StudySession[]) =>
+  sessions.reduce<Record<string, RecordItem[]>>((acc, session) => {
+    const dateKey = session.date;
+    const next = acc[dateKey] ?? [];
+    acc[dateKey] = [toRecordItem(session), ...next];
+    return acc;
+  }, {});
+
 const parseClockToMinutes = (value: string) => {
   const parts = value.split(":").map(Number);
   if (parts.length < 2) return null;
@@ -83,9 +148,9 @@ const parseClockToMinutes = (value: string) => {
 };
 
 const toTimelineMinutes = (minutes: number) => {
-  let value = minutes - 300;
+  let value = minutes;
   while (value < 0) value += 1440;
-  return value;
+  return value % 1440;
 };
 
 const calcDurationMinutes = (start: string, end: string) => {
@@ -115,11 +180,14 @@ export default function DailyRecordPage({
   const [autoStart, setAutoStart] = useState<Date | null>(null);
   const [autoElapsedSec, setAutoElapsedSec] = useState(0);
   const [runningSubjectId, setRunningSubjectId] = useState<string | null>(null);
+  const [runningSessionId, setRunningSessionId] = useState<number | null>(null);
   const [manualStart, setManualStart] = useState("09:00");
   const [manualEnd, setManualEnd] = useState("09:50");
   const [manualError, setManualError] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
+  const startRequestRef = useRef<ReturnType<typeof menteeStudySessionApi.start> | null>(null);
   const [recordsByDate, setRecordsByDate] = useState<Record<string, RecordItem[]>>(
     {}
   );
@@ -127,27 +195,71 @@ export default function DailyRecordPage({
 
   const subjectColorMap = useMemo(() => {
     const map = new Map<string, (typeof SUBJECT_COLORS)[number]>();
-    subjects.forEach((subject, index) => {
-      map.set(subject.id, SUBJECT_COLORS[index % SUBJECT_COLORS.length]);
+    const names = [
+      ...subjects.map((subject) => subject.id),
+      ...records.map((record) => record.subjectId),
+    ];
+    const unique = Array.from(new Set(names.filter(Boolean)));
+    unique.forEach((name, index) => {
+      map.set(
+        name,
+        SUBJECT_COLOR_BY_NAME[name] ?? SUBJECT_COLORS[index % SUBJECT_COLORS.length]
+      );
     });
     return map;
-  }, [subjects]);
+  }, [subjects, records]);
 
   const subjectTimes = useMemo(() => {
     const runningMinutes = autoRunning ? Math.floor(autoElapsedSec / 60) : 0;
     const runningSeconds = autoRunning ? autoElapsedSec % 60 : 0;
     return subjects.map((subject) => {
-      const baseMinutes = subject.tasks.reduce(
-        (acc, task) => acc + parseStudyMinutes(task.time),
-        0
-      );
+      const baseMinutes = records
+        .filter((record) => record.subjectId === subject.id)
+        .reduce((acc, record) => acc + record.durationMinutes, 0);
       const extra =
         autoRunning && subject.id === runningSubjectId ? runningMinutes : 0;
       const seconds =
         autoRunning && subject.id === runningSubjectId ? runningSeconds : 0;
       return { ...subject, minutes: baseMinutes + extra, seconds };
     });
-  }, [subjects, autoRunning, autoElapsedSec, runningSubjectId]);
+  }, [subjects, records, autoRunning, autoElapsedSec, runningSubjectId]);
+
+  const groupedRecords = useMemo(() => {
+    const order = new Map<string, number>([
+      ["국어", 0],
+      ["영어", 1],
+      ["수학", 2],
+    ]);
+    let fallbackIndex = 10;
+    subjects.forEach((subject) => {
+      if (!order.has(subject.id)) {
+        order.set(subject.id, fallbackIndex);
+        fallbackIndex += 1;
+      }
+    });
+
+    const map = new Map<string, RecordItem[]>();
+    records.forEach((record) => {
+      const list = map.get(record.subjectId) ?? [];
+      list.push(record);
+      map.set(record.subjectId, list);
+    });
+
+    const entries = Array.from(map.entries()).map(([subjectId, items]) => ({
+      subjectId,
+      subjectName: items[0]?.subjectName ?? subjectId,
+      items: [...items].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    }));
+
+    entries.sort((a, b) => {
+      const aOrder = order.has(a.subjectId) ? order.get(a.subjectId)! : 9999;
+      const bOrder = order.has(b.subjectId) ? order.get(b.subjectId)! : 9999;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.subjectName.localeCompare(b.subjectName, "ko-KR");
+    });
+
+    return entries;
+  }, [records, subjects]);
 
   const activeSubject = subjectTimes.find((subject) => subject.id === activeSubjectId);
   const activeName = activeSubject?.name ?? "과목";
@@ -166,6 +278,29 @@ export default function DailyRecordPage({
       setActiveSubjectId(subjects[0]?.id ?? "");
     }
   }, [subjects, activeSubjectId]);
+
+  useEffect(() => {
+    if (!dateKey) return;
+    menteeStudySessionApi.getByDate(dateKey)
+      .then((res) => {
+        const sessions = res.data ?? [];
+        setRecordsByDate((prev) => ({
+          ...prev,
+          ...toRecordsByDate(sessions),
+        }));
+        const running = sessions.find((session) => !session.endAt && session.mode === "AUTO");
+        if (running && !autoRunning) {
+          setRunningSessionId(running.sessionId);
+          setRunningSubjectId(running.subject);
+          const start = toKstDate(running.startAt);
+          setAutoStart(start ?? new Date());
+          setAutoRunning(true);
+        }
+      })
+      .catch(() => {
+        setRecordsByDate((prev) => ({ ...prev, [dateKey]: [] }));
+      });
+  }, [dateKey, autoRunning]);
 
   const elapsedLabel = useMemo(() => {
     const hours = Math.floor(autoElapsedSec / 3600);
@@ -192,13 +327,31 @@ export default function DailyRecordPage({
     setAutoStart(null);
     setAutoElapsedSec(0);
     setRunningSubjectId(null);
+    setRunningSessionId(null);
   };
 
   const startAuto = (subjectId: string) => {
+    if (startRequestRef.current) return;
+    const now = new Date();
+    const subjectName = subjects.find((subject) => subject.id === subjectId)?.name ?? subjectId;
     setRunningSubjectId(subjectId);
-    setAutoStart(new Date());
+    setAutoStart(now);
     setAutoElapsedSec(0);
     setAutoRunning(true);
+
+    const request = menteeStudySessionApi.start({
+      subject: subjectName,
+      startAt: formatLocalDateTime(now),
+    });
+    startRequestRef.current = request;
+    request
+      .then((res) => {
+        setRunningSessionId(res.data.sessionId);
+      })
+      .catch(() => {
+        resetAuto();
+        startRequestRef.current = null;
+      });
   };
 
   const stopAuto = () => {
@@ -233,7 +386,40 @@ export default function DailyRecordPage({
         };
       });
     }
+    const finalizeStop = (sessionId: number) => {
+      menteeStudySessionApi.stop(sessionId, { endAt: formatLocalDateTime(end) })
+        .then((res) => {
+          setRecordsByDate((prev) => ({
+            ...prev,
+            ...toRecordsByDate(res.data.sessions),
+          }));
+        })
+        .catch(() => {
+          // ignore to keep UI responsive
+        })
+        .finally(() => {
+          startRequestRef.current = null;
+        });
+    };
+
+    if (runningSessionId) {
+      finalizeStop(runningSessionId);
+    } else if (startRequestRef.current) {
+      startRequestRef.current
+        .then((res) => finalizeStop(res.data.sessionId))
+        .catch(() => {
+          // ignore
+        });
+    }
     resetAuto();
+  };
+
+  const handleBack = () => {
+    if (autoRunning) {
+      setBackConfirmOpen(true);
+      return;
+    }
+    onBack();
   };
 
   const handleConfirmSwitch = () => {
@@ -350,35 +536,34 @@ export default function DailyRecordPage({
       return;
     }
     setManualError("");
-    setRecordsByDate((prev) => {
-      const next = prev[dateKey] ?? [];
-      return {
-        ...prev,
-        [dateKey]: [
-          {
-            id: `record-${Date.now()}`,
-            subjectId: activeSubject.id,
-            subjectName: activeSubject.name,
-            durationMinutes: duration,
-            startTime: manualStart,
-            endTime: manualEnd,
-          },
-          ...next,
-        ],
-      };
-    });
+    const startAt = toIsoFromDateTime(dateKey, manualStart);
+    const endAt = toIsoFromDateTime(dateKey, manualEnd);
+    menteeStudySessionApi.createManual({
+      subject: activeSubject.name,
+      startAt,
+      endAt,
+    })
+      .then((res) => {
+        setRecordsByDate((prev) => ({
+          ...prev,
+          ...toRecordsByDate(res.data.sessions),
+        }));
+      })
+      .catch(() => {
+        setManualError("기록 저장에 실패했어요. 잠시 후 다시 시도해주세요.");
+      });
     setRecordModalOpen(false);
   };
   const rowHeight = 18;
   const totalRows = 24;
-  const hourLabels = Array.from({ length: 24 }, (_, index) => (index + 5) % 24);
+  const hourLabels = Array.from({ length: 24 }, (_, index) => index);
 
   return (
     <div className="space-y-6 pb-6 pt-1">
       <div className="relative z-10 flex items-center gap-2">
         <button
           type="button"
-          onClick={onBack}
+          onClick={handleBack}
           className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
           aria-label="뒤로가기"
         >
@@ -425,32 +610,46 @@ export default function DailyRecordPage({
       </div>
 
       <div>
-        <div className="mt-3 overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-gray-50 via-[#F7F8FC] to-[#F1F3F9] p-0 shadow-sm">
+        <div className="mt-3 overflow-hidden rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 via-[#F7F8FC] to-[#F1F3F9] p-0 shadow-sm">
           <div className="-ml-2 grid grid-cols-[36px_1fr] gap-1 items-start">
-            <div
-              className="grid text-[7px] font-semibold text-gray-400 leading-none bg-white/50"
-              style={{ gridTemplateRows: `repeat(24, ${rowHeight}px)` }}
-            >
+            <div className="flex flex-col">
+              <div className="h-4 bg-white/60" />
+              <div
+                className="grid text-[7px] font-semibold text-gray-400 leading-none bg-white/60"
+                style={{
+                  gridTemplateRows: `repeat(24, ${rowHeight}px)`,
+                  height: totalRows * rowHeight - 1,
+                }}
+              >
               {hourLabels.map((hour) => (
                 <div key={hour} className="flex items-start justify-end pr-1">
                   {String(hour).padStart(2, "0")}
                 </div>
               ))}
+              </div>
             </div>
-            <div
-              className="relative box-border"
-              style={{
-                height: totalRows * rowHeight,
-                padding: "1px",
-                backgroundColor: "transparent",
-                backgroundImage:
-                  "linear-gradient(to right, rgba(214,219,232,0.55) 1px, transparent 1px), linear-gradient(to bottom, rgba(214,219,232,0.55) 1px, transparent 1px)",
-                backgroundSize: `calc(100% / 12) 100%, 100% ${rowHeight}px`,
-                backgroundPosition: "-1px -1px, -1px -1px",
-                backgroundOrigin: "content-box",
-                backgroundClip: "content-box",
-              }}
-            >
+            <div className="flex flex-col pr-2">
+              <div className="mb-1 grid grid-cols-12 text-[7px] font-semibold text-gray-400 leading-none bg-white/60">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <div key={index} className="text-right pr-0.5 mt-1 mb-1">
+                    {(index + 1) * 5}
+                  </div>
+                ))}
+              </div>
+              <div
+                className="relative box-border"
+                style={{
+                  height: totalRows * rowHeight - 1,
+                  padding: "1px",
+                  backgroundColor: "transparent",
+                  backgroundImage:
+                    "linear-gradient(to right, rgba(214,219,232,0.55) 1px, transparent 1px), linear-gradient(to bottom, rgba(214,219,232,0.55) 1px, transparent 1px)",
+                  backgroundSize: `calc(100% / 12) 100%, 100% ${rowHeight}px`,
+                  backgroundPosition: "-1px -1px, -1px -1px",
+                  backgroundOrigin: "content-box",
+                  backgroundClip: "content-box",
+                }}
+              >
               {timetableSegments.map((segment) => {
                 const color = subjectColorMap.get(segment.subjectId);
                 const hourIndex = Math.floor(segment.startMinute / 60);
@@ -472,6 +671,7 @@ export default function DailyRecordPage({
                   />
                 );
               })}
+              </div>
             </div>
           </div>
         </div>
@@ -484,53 +684,66 @@ export default function DailyRecordPage({
             오늘 날짜에서만 기록할 수 있어요.
           </div>
         )}
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-3">
           {records.length === 0 && (
             <div className="text-xs font-semibold text-gray-400">
               아직 기록된 시간이 없습니다.
             </div>
           )}
-          {records.map((record) => {
-            const color = subjectColorMap.get(record.subjectId);
+          {groupedRecords.map((group) => {
+            const color = subjectColorMap.get(group.subjectId);
             return (
-            <div
-              key={record.id}
-              className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`h-5 w-5 rounded-full text-center text-[10px] font-semibold ${
-                    color?.fill ?? "bg-violet-200/70"
-                  } text-violet-700`}
-                >
-                  +
-                </span>
-                <span className="font-semibold text-gray-700">
-                  {record.subjectName}
-                </span>
-                <span className="text-gray-400">
-                  {formatDurationLabel(record.durationMinutes)} : {record.startTime}-
-                  {record.endTime}
-                </span>
+              <div key={group.subjectId} className="space-y-2">
+                <div className="flex items-center gap-2 px-1 text-xs font-semibold text-gray-600">
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${
+                      color?.dot ?? "bg-violet-400"
+                    }`}
+                  />
+                  {group.subjectName}
+                </div>
+                {group.items.map((record) => (
+                  <div
+                    key={record.id}
+                    className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${
+                          color?.dot ?? "bg-violet-400"
+                        } ${color?.text ?? "text-white"}`}
+                      >
+                        <HiOutlineClock size={15} className="text-white" />
+                      </span>
+                      <span className="font-semibold text-gray-700">
+                        {record.subjectName}
+                      </span>
+                      <span className="text-gray-400">
+                        {formatDurationLabel(record.durationMinutes)} : {record.startTime}-
+                        {record.endTime}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRecordsByDate((prev) => ({
+                            ...prev,
+                            [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
+                          }))
+                        }
+                        disabled={readOnly}
+                        className="rounded-full border border-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-500"
+                        aria-label="기록 삭제"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setRecordsByDate((prev) => ({
-                      ...prev,
-                      [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
-                    }))
-                  }
-                  disabled={readOnly}
-                  className="rounded-full border border-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-500"
-                  aria-label="기록 삭제"
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          )})}
+            );
+          })}
         </div>
       </div>
 
@@ -583,6 +796,21 @@ export default function DailyRecordPage({
           </div>
         </div>
       </ModalBase>
+
+      <ConfirmModal
+        open={backConfirmOpen}
+        variant="info"
+        title="기록 중입니다"
+        description="기록을 종료하고 돌아갈까요?"
+        cancelText="계속 기록"
+        confirmText="종료하고 나가기"
+        onCancel={() => setBackConfirmOpen(false)}
+        onConfirm={() => {
+          setBackConfirmOpen(false);
+          stopAuto();
+          onBack();
+        }}
+      />
     </div>
   );
 }
