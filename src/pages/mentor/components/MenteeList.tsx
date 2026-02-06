@@ -11,10 +11,10 @@ export default function MenteeList({ rows, selectedId, onSelect }: Props) {
   return (
     <div className="space-y-3">
       
-      <div className="grid grid-cols-[220px_1fr_140px] px-2 text-xs text-gray-400">
-        <div>이름</div>
+      <div className="grid grid-cols-[170px_1fr_170px] px-2 text-xs text-gray-400">
+        <div className="text-center">이름</div>
         <div className="text-center">학교</div>
-        <div className="text-right">학년</div>
+        <div className="text-center">학년</div>
       </div>
 
       <div className="space-y-2">

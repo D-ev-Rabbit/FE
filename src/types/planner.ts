@@ -33,6 +33,13 @@ export type MenteeTodo = {
   goal?: string;
   isCompleted: boolean;
   comment?: string;
+  files?: {
+    fileId: number;
+    url: string;
+    type: string;
+    version: string | null;
+    feedbacks: unknown[];
+  }[];
 };
 
 export type SubjectGroup = {

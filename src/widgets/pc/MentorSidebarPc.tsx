@@ -4,7 +4,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/shared/lib/cn";
 import { HiOutlineUsers } from "react-icons/hi2";
 import { MdOutlineFeedback, MdChecklist } from "react-icons/md";
-import { RiTodoLine } from "react-icons/ri";
 import { FiLogOut, FiHome } from "react-icons/fi";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 
@@ -16,10 +15,9 @@ type Item = {
 
 const items: Item[] = [
   { label: "Home", to: "/mentor/home", icon: (c) => <FiHome className={c} /> },
-  { label: "과제", to: "/mentor/tasks", icon: (c) => <RiTodoLine className={c} /> },
+  { label: "멘티 관리", to: "/mentor/mentees", icon: (c) => <HiOutlineUsers className={c} /> },
+  { label: "플래너 및 과제 관리", to: "/mentor/todo", icon: (c) => <MdChecklist className={c} /> },
   { label: "피드백", to: "/mentor/feedback", icon: (c) => <MdOutlineFeedback className={c} /> },
-  { label: "할 일 관리", to: "/mentor/todo", icon: (c) => <MdChecklist className={c} /> },
-  { label: "멘티 목록", to: "/mentor/mentees", icon: (c) => <HiOutlineUsers className={c} /> },
 ];
 
 export default function MentorSidebarPc() {
@@ -75,7 +73,7 @@ export default function MentorSidebarPc() {
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-red-500 hover:bg-red-50/60"
           >
             <FiLogOut className="h-5 w-5 text-red-500" />
-            Logout
+            로그아웃
           </button>
         </div>
       </aside>

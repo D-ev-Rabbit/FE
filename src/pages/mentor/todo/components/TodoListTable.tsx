@@ -19,13 +19,15 @@ type Props = {
 const subjectLabel = (s: TodoItem["subject"]) =>
   s === "KOREAN" ? "국어" : s === "ENGLISH" ? "영어" : "수학"
 
+const subjectBadgeClass = (s: TodoItem["subject"]) => {
+  if (s === "KOREAN") return "bg-yellow-100 text-yellow-800 ring-yellow-200";
+  if (s === "ENGLISH") return "bg-rose-100 text-rose-800 ring-rose-200";
+  return "bg-indigo-100 text-indigo-800 ring-indigo-200";
+};
+
 export default function TodoListTable({ items, onToggleDone, onClickRow, className }: Props) {
   return (
     <div className={clsx("rounded-2xl border border-gray-200 bg-white", className)}>
-      <div className="px-5 py-4">
-        <div className="text-sm font-extrabold text-gray-900">To do List</div>
-      </div>
-
       <div className="max-h-[420px] overflow-y-auto">
         {items.length === 0 ? (
           <div className="px-5 pb-5 text-sm text-gray-500">해당 날짜/과목의 과제가 없어요.</div>
@@ -47,7 +49,12 @@ export default function TodoListTable({ items, onToggleDone, onClickRow, classNa
                         {t.title}
                       </div>
 
-                      <span className="shrink-0 rounded-full bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200">
+                      <span
+                        className={clsx(
+                          "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                          subjectBadgeClass(t.subject)
+                        )}
+                      >
                         {subjectLabel(t.subject)}
                       </span>
                     </div>

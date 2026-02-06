@@ -40,4 +40,9 @@ export const menteeStudySessionApi = {
       params: { date },
     });
   },
+
+  // DELETE /api/mentee/study-sessions/{sessionId}
+  delete: (sessionId: number) => {
+    return axiosInstance.delete<void>(`/api/mentee/study-sessions/${sessionId}`);
+  },
 };

@@ -15,6 +15,7 @@ import { createMenteeTodo, deleteMenteeTodo, getMenteeTodos, patchMenteeTodo } f
 import type { MenteeTodo, SubjectGroup } from "@/types/planner";
 import { menteeStudySessionApi } from "@/api/mentee/studySession";
 import type { StudySession } from "@/types/studySession";
+import { menteePlannerApi } from "@/api/mentee/planner";
 
 export default function MenteeCalendarPage() {
   const navigate = useNavigate();
@@ -105,6 +106,8 @@ export default function MenteeCalendarPage() {
 
   const [todos, setTodos] = useState<MenteeTodo[]>([]);
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
+  const [mentorComment, setMentorComment] = useState("");
+  const [plannerTodoCounts, setPlannerTodoCounts] = useState<{ total: number; completed: number } | null>(null);
   const [weeklySessionsByDate, setWeeklySessionsByDate] = useState<Record<string, StudySession[]>>(
     {}
   );
@@ -161,6 +164,24 @@ export default function MenteeCalendarPage() {
   useEffect(() => {
     refetchTodos(currentDateKey).catch(console.error);
   }, [currentDateKey]);
+
+  useEffect(() => {
+    menteePlannerApi
+      .getPlannerByDate(currentDateKey)
+      .then((res) => {
+        setMentorComment(res.data?.comment ?? "");
+        setPlannerTodoCounts(res.data?.todoCounts ?? null);
+      })
+      .catch(() => {
+        setMentorComment("");
+        setPlannerTodoCounts(null);
+      });
+  }, [currentDateKey]);
+
+  const plannerTotalCount = plannerTodoCounts?.total ?? totalCount;
+  const plannerDoneCount = plannerTodoCounts?.completed ?? doneCount;
+  const plannerProgress =
+    plannerTotalCount === 0 ? 0 : Math.round((plannerDoneCount / plannerTotalCount) * 100);
 
   useEffect(() => {
     menteeStudySessionApi.getByDate(currentDateKey)
@@ -526,14 +547,15 @@ export default function MenteeCalendarPage() {
       {viewMode === "daily" && (
         <DailyView
           todayLabel={todayLabel}
-          progress={progress}
-          doneCount={doneCount}
-          totalCount={totalCount}
+          progress={plannerProgress}
+          doneCount={plannerDoneCount}
+          totalCount={plannerTotalCount}
           dailyNoteText={dailyNoteText}
           subjects={subjectsForSelectedDate} //  API 기반 subjects
           studyMinutesBySubject={studyMinutesBySubject}
           totalStudyMinutes={totalStudyMinutes}
           openSubjects={openSubjectsUI}      //  우리가 만든 토글 상태
+          mentorComment={mentorComment}
           onPrevDay={goToPrevDay}
           onNextDay={goToNextDay}
           onOpenDatePicker={() => {

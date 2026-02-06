@@ -13,6 +13,8 @@ import type { MenteeRowData } from "./components/MenteeRow";
 import CalendarPopover from "./components/CalendarPopover";
 import SubjectFilter, { type Subject } from "./components/subjectFilter"
 import { TaskCard } from "./components/TaskCard";
+import { mentorTodoApi } from "@/api/mentor/todo";
+import type { MentorTodo } from "@/types/mentorTodo";
 
 
 
@@ -25,25 +27,13 @@ type Todo = {
   feedbackDone: boolean
 }
 
-// test 더미 
-const todos: Todo[] = [
-  { id: 1, title: "비문학 3지문", subject: "KOREAN", menteeId: "1", date: "2026-02-05", feedbackDone: true },
-  { id: 2, title: "단어 50개", subject: "ENGLISH", menteeId: "1", date: "2026-02-05" , feedbackDone: true },
-  { id: 3, title: "미적분 10문제", subject: "MATH", menteeId: "1", date: "2026-02-05" , feedbackDone: false },
-  { id: 4, title: "문법 20문제", subject: "KOREAN", menteeId: "1", date: "2026-02-06" , feedbackDone: false },
-  { id: 5, title: "비문학 3지문", subject: "KOREAN", menteeId: "2", date: "2026-02-05" , feedbackDone: true },
-  { id: 6, title: "단어 50개", subject: "ENGLISH", menteeId: "2", date: "2026-02-06" , feedbackDone: false },
-  { id: 7, title: "미적분 10문제", subject: "MATH", menteeId: "2", date: "2026-02-05" , feedbackDone: false },
-  { id: 8, title: "문법 20문제", subject: "KOREAN", menteeId: "2", date: "2026-02-06" , feedbackDone: true },
-
-]
-
 export default function MentorTasksPage() {
   const navigate = useNavigate();
 
   const [mentees, setMentees] = useState<MentorMentee[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [isLoadingTodos, setIsLoadingTodos] = useState(false);
 
   const selectedStudent = useMemo(() => {
     if (!selectedMenteeId) return null;
@@ -85,6 +75,58 @@ export default function MentorTasksPage() {
     selectedDate.getMonth() + 1
   ).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`
   const [subject, setSubject] = useState<Subject>("ALL");
+
+  const subjectToApi = (value: Subject | undefined) => {
+    if (!value || value === "ALL") return undefined;
+    if (value === "KOREAN") return "국어";
+    if (value === "ENGLISH") return "영어";
+    if (value === "MATH") return "수학";
+    return undefined;
+  };
+
+  const subjectFromApi = (value?: string) => {
+    if (!value) return "KOREAN" as Todo["subject"];
+    if (value === "국어" || value === "KOREAN") return "KOREAN";
+    if (value === "영어" || value === "ENGLISH") return "ENGLISH";
+    if (value === "수학" || value === "MATH") return "MATH";
+    return "KOREAN";
+  };
+
+  useEffect(() => {
+    if (!selectedMenteeId) {
+      setTodos([]);
+      return;
+    }
+    let ignore = false;
+    setIsLoadingTodos(true);
+    mentorTodoApi.getMenteeTodos(Number(selectedMenteeId), {
+      date: selectedDateStr,
+      subject: subjectToApi(subject),
+    })
+      .then((res) => {
+        if (ignore) return;
+        const items = (res.data ?? []).map((t: MentorTodo) => ({
+          id: t.id,
+          title: t.title,
+          subject: subjectFromApi(t.subject),
+          menteeId: String(selectedMenteeId),
+          date: t.date,
+          feedbackDone: !!t.isCompleted,
+        }));
+        setTodos(items);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setTodos([]);
+      })
+      .finally(() => {
+        if (ignore) return;
+        setIsLoadingTodos(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [selectedMenteeId, selectedDateStr, subject]);
   const filtered = useMemo(() => {
     if (!selectedMenteeId) return []
 
@@ -100,6 +142,10 @@ export default function MentorTasksPage() {
 
   return (
     <div className="w-full">
+      <div className="mb-5">
+          <div className="text-base font-extrabold text-violet-900">과제 관리</div>
+          <div className="mt-2 text-sm text-gray-500">멘티별 과제를 등록하고 관리할 수 있어요.</div>
+        </div>
           <div className="mb-5">
             <div className="text-sm font-extrabold text-gray-900">멘티 목록</div>
           </div>
@@ -189,6 +235,9 @@ export default function MentorTasksPage() {
                       />
                     ))}
                   </ul>
+                  {isLoadingTodos && (
+                    <div className="mt-3 text-xs text-gray-400">불러오는 중...</div>
+                  )}
                 </div>  
               </div>
               <div className="space-y-3">
