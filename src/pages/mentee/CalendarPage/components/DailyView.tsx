@@ -8,6 +8,7 @@ import {
 } from "react-icons/hi2";
 import type { SubjectGroup } from "../types/calendar";
 import { formatStudyTime, parseStudyMinutes } from "../utils/time";
+import type { MenteeTodo } from "@/types/planner";
 
 type DailyViewProps = {
   todayLabel: string;
@@ -42,7 +43,6 @@ export default function DailyView({
   onNextDay,
   onOpenDatePicker,
   onOpenDailyNote,
-  onGoMonthly,
   onOpenRecord,
   onToggleSubject,
   onAddTask,
@@ -57,6 +57,7 @@ export default function DailyView({
     return { id: subject.id, name: subject.name, minutes };
   });
   const totalStudyMinutes = studyTimes.reduce((acc, cur) => acc + cur.minutes, 0);
+
   return (
     <>
       <div className="grid grid-cols-[1fr_auto] gap-3">
