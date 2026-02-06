@@ -7,6 +7,7 @@ import {
 } from "react-icons/hi2";
 import type { SubjectGroup } from "../types/calendar";
 import { parseStudyMinutes } from "../utils/time";
+import { cn } from "@/shared/lib/cn";
 
 type DailyViewProps = {
   todayLabel: string;
@@ -18,6 +19,7 @@ type DailyViewProps = {
   studyMinutesBySubject: Record<string, number>;
   totalStudyMinutes: number;
   openSubjects: Record<string, boolean>;
+  onOpenTaskDetail: (taskId: string) => void;
 
   onPrevDay: () => void;
   onNextDay: () => void;
@@ -50,6 +52,7 @@ export default function DailyView({
   onAddTask,
   onToggleTaskDone,
   onOpenTaskActions,
+  onOpenTaskDetail,
 }: DailyViewProps) {
   const formatStudyTimeCaps = (minutes: number) => {
     if (minutes <= 0) return "0M";
@@ -225,27 +228,33 @@ export default function DailyView({
                         key={task.id}
                         className="flex items-center justify-between gap-2 text-sm"
                       >
-                        <button
-                          type="button"
-                          onClick={() => onToggleTaskDone(subject.id, task.id)}
-                          className="flex items-center gap-2 bg-transparent p-0 text-left"
-                          aria-label={`${task.title} 완료`}
-                        >
-                          <span
-                            className={`h-3 w-3 rounded-full border ${
-                              task.done
-                                ? "border-violet-500 bg-violet-500"
-                                : "border-gray-300 bg-white"
-                            }`}
-                          />
-                          <span
-                            className={
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onToggleTaskDone(subject.id, task.id)}
+                            className="flex items-center gap-2 bg-transparent p-0 text-left"
+                            aria-label={`${task.title} 완료`}
+                          >
+                            <span
+                              className={`h-3 w-3 rounded-full border ${
+                                task.done
+                                  ? "border-violet-500 bg-violet-500"
+                                  : "border-gray-300 bg-white"
+                              }`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onOpenTaskDetail(String(task.id))}
+                            className={cn(
+                              "bg-transparent p-0 text-left",
                               task.done ? "text-gray-400 line-through" : "text-gray-900"
-                            }
+                            )}
+                            aria-label={`${task.title} 상세보기`}
                           >
                             {task.title}
-                          </span>
-                        </button>
+                          </button>
+                        </div>
 
                         <button
                           type="button"

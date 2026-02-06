@@ -1,31 +1,68 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DateNavigator from "./components/DateNavigator";
 import FeedbackSummaryCard from "./components/FeedbackSummaryCard";
 import SubjectSection from "./components/SubjectSection";
 import type { FeedbackSummary, SubjectSection as SubjectSectionType } from "./types/tasks";
 import { addDays, formatKoreanDate, toDateKey } from "./utils/date";
-import { createTaskData } from "./data/mock";
+import { getMenteeTodos } from "@/api/mentee/todo";
+import type { MenteeTodo } from "@/types/planner";
 
-const SUBJECTS: Array<Pick<SubjectSectionType, "id" | "label">> = [
-  { id: "korean", label: "국어" },
-  { id: "english", label: "영어" },
-];
-
-const buildEmptySections = (): SubjectSectionType[] =>
-  SUBJECTS.map((subject) => ({ ...subject, tasks: [] }));
+const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
 
 export default function MenteeTasksPage() {
   const baseDate = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(() => baseDate);
-
-  const { tasksByDate, feedbackByDate } = useMemo(
-    () => createTaskData(baseDate),
-    [baseDate]
-  );
+  const [todos, setTodos] = useState<MenteeTodo[]>([]);
+  const feedbacks: FeedbackSummary[] = [];
 
   const dateKey = toDateKey(selectedDate);
-  const sections = tasksByDate[dateKey] ?? buildEmptySections();
-  const feedbacks = feedbackByDate[dateKey] ?? [];
+
+  useEffect(() => {
+    let ignore = false;
+    getMenteeTodos({ date: dateKey })
+      .then((res) => {
+        if (ignore) return;
+        setTodos(res.data ?? []);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setTodos([]);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [dateKey]);
+
+  const sections = useMemo(() => {
+    const bySubject = new Map<string, SubjectSectionType>();
+
+    DEFAULT_SUBJECTS.forEach((name) => {
+      bySubject.set(name, { id: name, label: name, tasks: [] });
+    });
+
+    todos.forEach((todo) => {
+      const subject = todo.subject || "기타";
+      if (!bySubject.has(subject)) {
+        bySubject.set(subject, { id: subject, label: subject, tasks: [] });
+      }
+      bySubject.get(subject)!.tasks.push({
+        id: todo.id,
+        title: todo.title,
+        status: todo.isCompleted ? "done" : "pending",
+      });
+    });
+
+    const isSection = (value: SubjectSectionType | undefined): value is SubjectSectionType =>
+      Boolean(value);
+
+    const ordered = [
+      ...DEFAULT_SUBJECTS.map((name) => bySubject.get(name)).filter(isSection),
+      ...Array.from(bySubject.values()).filter(
+        (section) => !DEFAULT_SUBJECTS.includes(section.label as typeof DEFAULT_SUBJECTS[number])
+      ),
+    ];
+    return ordered;
+  }, [todos]);
 
   return (
     <div className="space-y-5 pb-6">

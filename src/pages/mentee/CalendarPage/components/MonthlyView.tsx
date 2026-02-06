@@ -31,6 +31,7 @@ type MonthlyViewProps = {
   studyMinutesBySubject: Record<string, number>;
   totalStudyMinutes: number;
   openSubjects: Record<string, boolean>;
+  onOpenTaskDetail: (taskId: string) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDate: (date: Date) => void;
@@ -77,6 +78,7 @@ export default function MonthlyView({
   onOpenTaskActions,
   getTasksForDate,
   onGoDaily,
+  onOpenTaskDetail,
   goalModalOpen,
   goalDraftTitle,
   goalEditId,
@@ -252,27 +254,32 @@ export default function MonthlyView({
                         key={task.id}
                         className="flex items-center justify-between gap-2 text-sm"
                       >
-                        <button
-                          type="button"
-                          onClick={() => onToggleTaskDone(subject.id, task.id)}
-                          className="flex items-center gap-2 bg-transparent p-0 text-left"
-                          aria-label={`${task.title} 완료`}
-                        >
-                          <span
-                            className={`h-3 w-3 rounded-full border ${
-                              task.done
-                                ? "border-violet-500 bg-violet-500"
-                                : "border-gray-300 bg-white"
-                            }`}
-                          />
-                          <span
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onToggleTaskDone(subject.id, task.id)}
+                            className="flex items-center gap-2 bg-transparent p-0 text-left"
+                            aria-label={`${task.title} 완료`}
+                          >
+                            <span
+                              className={`h-3 w-3 rounded-full border ${
+                                task.done
+                                  ? "border-violet-500 bg-violet-500"
+                                  : "border-gray-300 bg-white"
+                              }`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onOpenTaskDetail(String(task.id))}
                             className={
                               task.done ? "text-gray-400 line-through" : "text-gray-900"
                             }
+                            aria-label={`${task.title} 상세보기`}
                           >
                             {task.title}
-                          </span>
-                        </button>
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => onOpenTaskActions(subject.id, task)}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddTaskModal from "./components/AddTaskModal";
 import DatePickerModal from "./components/DatePickerModal";
 import DailyNoteModal from "./components/DailyNoteModal";
@@ -16,6 +17,7 @@ import { menteeStudySessionApi } from "@/api/mentee/studySession";
 import type { StudySession } from "@/types/studySession";
 
 export default function MenteeCalendarPage() {
+  const navigate = useNavigate();
   const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
@@ -150,6 +152,10 @@ export default function MenteeCalendarPage() {
 
   const toggleSubjectUI = (id: string) => {
     setOpenSubjectsUI((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const openTaskDetail = (taskId: string) => {
+    navigate(`/mentee/tasks/${taskId}`);
   };
 
   useEffect(() => {
@@ -475,6 +481,7 @@ export default function MenteeCalendarPage() {
           onToggleTaskDone={toggleTaskDone}
           onOpenTaskActions={openTaskActions}
           getTasksForDate={getTasksForDate}
+          onOpenTaskDetail={openTaskDetail}
           onGoDaily={() => {
             setViewMode("daily");
             requestAnimationFrame(scrollToTop);
@@ -508,6 +515,7 @@ export default function MenteeCalendarPage() {
           onAddTask={openAddTask}
           onToggleTaskDone={toggleTaskDone}
           onOpenTaskActions={openTaskActions}
+          onOpenTaskDetail={openTaskDetail}
           onGoDaily={() => {
             setViewMode("daily");
             requestAnimationFrame(scrollToTop);
@@ -539,6 +547,7 @@ export default function MenteeCalendarPage() {
           onAddTask={openAddTask}
           onToggleTaskDone={handleToggleTodoDone} //  PATCH 연결
           onOpenTaskActions={openTaskActions}
+          onOpenTaskDetail={openTaskDetail}
         />
       )}
 
