@@ -9,6 +9,14 @@ const SUBJECTS: { key: Subject; label: string }[] = [
   { key: "MATH", label: "수학" },
 ]
 
+const subjectChipClass = (key: Subject, active: boolean) => {
+  if (!active) return "border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800";
+  if (key === "KOREAN") return "border-yellow-300 bg-yellow-50 text-yellow-800";
+  if (key === "ENGLISH") return "border-rose-300 bg-rose-50 text-rose-800";
+  if (key === "MATH") return "border-indigo-300 bg-indigo-50 text-indigo-800";
+  return "border-gray-900 text-gray-900";
+};
+
 type Props = {
   value: Subject
   onChange: (next: Subject) => void
@@ -27,13 +35,11 @@ export default function SubjectFilter({ value, onChange, className }: Props) {
             onClick={() => onChange(s.key)}
             className={clsx(
               "inline-flex items-center justify-center whitespace-nowrap",
-              "h-12 px-6 rounded-full border",
-              "text-base font-medium leading-none",
-              "min-w-[72px]",
+              "h-7 px-5 rounded-full border",
+              "text-sm font-semibold leading-none",
+              "min-w-[64px]",
               "transition-colors",
-              active
-                ? "border-gray-900 text-gray-900"
-                : "border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800"
+              subjectChipClass(s.key, active)
             )}
             aria-pressed={active}
           >

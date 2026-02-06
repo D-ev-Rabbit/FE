@@ -16,10 +16,10 @@ type Item = {
 
 const items: Item[] = [
   { label: "Home", to: "/mentor/home", icon: (c) => <FiHome className={c} /> },
-  { label: "과제", to: "/mentor/tasks", icon: (c) => <RiTodoLine className={c} /> },
+  { label: "멘티 관리", to: "/mentor/mentees", icon: (c) => <HiOutlineUsers className={c} /> },
+  { label: "플래너 및 과제 관리", to: "/mentor/todo", icon: (c) => <MdChecklist className={c} /> },
   { label: "피드백", to: "/mentor/feedback", icon: (c) => <MdOutlineFeedback className={c} /> },
-  { label: "할 일 관리", to: "/mentor/todo", icon: (c) => <MdChecklist className={c} /> },
-  { label: "멘티 목록", to: "/mentor/mentees", icon: (c) => <HiOutlineUsers className={c} /> },
+  { label: "과제(x)", to: "/mentor/tasks", icon: (c) => <RiTodoLine className={c} /> },
 ];
 
 export default function MentorSidebarPc() {

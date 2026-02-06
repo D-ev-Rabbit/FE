@@ -52,10 +52,15 @@ export default function MenteesPage() {
   // 캘린더
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  
+
 
   return (
+
     <div className="w-full">
+      <div className="mb-5">
+        <div className="text-base font-extrabold text-violet-900">멘티 관리</div>
+        <div className="mt-2 text-sm text-gray-500">멘티별 현황을 확인 할 수 있어요.</div>
+      </div>
       <div className="mb-5">
         <div className="text-sm font-extrabold text-gray-900">멘티 목록</div>
       </div>
@@ -81,7 +86,7 @@ export default function MenteesPage() {
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                <FaRegCalendar/>
+                <FaRegCalendar />
               </span>
               <span>
                 {selectedDate.toLocaleDateString("en-US", {
@@ -100,10 +105,10 @@ export default function MenteesPage() {
             >
               Today
             </button>
-            
+
             {/* 캘린더 팝업 */}
             {calendarOpen && (
-              
+
               <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
                 <div className="relative">
                   <CalendarPopover
@@ -116,7 +121,7 @@ export default function MenteesPage() {
                   />
                 </div>
               </ModalBase>
-              
+
             )}
           </div>
 

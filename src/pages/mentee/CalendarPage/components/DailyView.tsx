@@ -2,7 +2,6 @@ import {
   HiOutlineChevronDown,
   HiOutlineChevronUp,
   HiOutlineEllipsisHorizontal,
-  HiOutlinePencil,
   HiOutlinePlus,
 } from "react-icons/hi2";
 import type { SubjectGroup } from "../types/calendar";
@@ -19,6 +18,7 @@ type DailyViewProps = {
   studyMinutesBySubject: Record<string, number>;
   totalStudyMinutes: number;
   openSubjects: Record<string, boolean>;
+  mentorComment?: string;
   onOpenTaskDetail: (taskId: string) => void;
 
   onPrevDay: () => void;
@@ -38,15 +38,14 @@ export default function DailyView({
   progress,
   doneCount,
   totalCount,
-  dailyNoteText,
   subjects,
   studyMinutesBySubject,
   totalStudyMinutes,
   openSubjects,
+  mentorComment,
   onPrevDay,
   onNextDay,
   onOpenDatePicker,
-  onOpenDailyNote,
   onOpenRecord,
   onToggleSubject,
   onAddTask,
@@ -128,20 +127,6 @@ export default function DailyView({
           </div>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onOpenDailyNote}
-        className="relative w-full rounded-3xl border border-gray-200 bg-white px-4 py-6 text-sm font-semibold text-gray-500 shadow-sm"
-        aria-label="오늘의 한마디 입력"
-      >
-        <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 p-0 text-gray-500 shadow-none">
-          <HiOutlinePencil className="h-4 w-4 text-gray-500" />
-        </span>
-        <span className="block w-full px-2 text-center whitespace-pre-line break-words">
-          {dailyNoteText ? dailyNoteText : "오늘의 한마디 / 다짐"}
-        </span>
-      </button>
 
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
         <div className="grid grid-cols-[1fr_auto] items-center gap-2">
@@ -276,7 +261,9 @@ export default function DailyView({
 
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-6 shadow-sm">
         <div className="text-sm font-semibold text-gray-800">멘토 피드백</div>
-        <div className="mt-6 text-sm text-gray-300">멘토 피드백이 이곳에 표시됩니다.</div>
+        <div className={cn("mt-6 text-sm", mentorComment ? "text-gray-700" : "text-gray-300")}>
+          {mentorComment ? mentorComment : "멘토 피드백이 이곳에 표시됩니다."}
+        </div>
       </div>
     </>
   );

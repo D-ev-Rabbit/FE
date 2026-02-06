@@ -71,8 +71,12 @@ export default function MentorHomeLayout({
          ========================= */}
       <section className="space-y-3">
         {/* 모바일: px-0 / lg: px-4 */}
+        <div className="mb-5">
+          <div className="text-base font-extrabold text-violet-900">HOME</div>
+          <div className="mt-2 text-sm text-gray-500">멘티별 현황과 피드백할 과제를 간단하게 확인할 수 있어요.</div>
+        </div>
         <div className="flex items-center justify-between lg:px-4">
-          <div className="text-sm font-extrabold text-gray-900">멘티 선택</div>
+          <div className="text-sm font-extrabold text-gray-900">멘티 목록</div>
 
           <div className="hidden items-center gap-2 lg:flex">
             <button

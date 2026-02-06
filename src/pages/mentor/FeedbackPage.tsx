@@ -1,96 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import FeedbackModal from "@/widgets/mentor-feedback/FeedbackModal";
-import type { Submission } from "@/widgets/mentor-feedback/types";
+import type { Submission, Subject } from "@/widgets/mentor-feedback/types";
 import { cn } from "@/shared/lib/cn";
 import MenteeCard from "@/shared/ui/card/MenteeCard";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee } from "@/types/mentor";
-
-const mock: Submission[] = [
-  {
-    id: "s1",
-    menteeName: "홍길동",
-    gradeLabel: "고등학교 2학년",
-    submittedAt: "25/12/2023",
-    subject: "수학",
-    images: [
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-    ],
-  },
-  {
-    id: "s1",
-    menteeName: "홍길동",
-    gradeLabel: "고등학교 2학년",
-    submittedAt: "25/12/2023",
-    subject: "수학",
-    images: [
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-    ],
-  },
-  {
-    id: "s2",
-    menteeName: "홍길동",
-    gradeLabel: "고등학교 2학년",
-    submittedAt: "26/12/2023",
-    subject: "국어",
-    images: ["https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1200&q=80"],
-  },
-  {
-    id: "s1",
-    menteeName: "홍길동",
-    gradeLabel: "고등학교 2학년",
-    submittedAt: "25/12/2023",
-    subject: "수학",
-    images: [
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-    ],
-  },
-  {
-    id: "s3",
-    menteeName: "정길동",
-    gradeLabel: "고등학교 2학년",
-    submittedAt: "28/12/2023",
-    subject: "영어",
-    images: ["https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"],
-  },
-  {
-    id: "s1",
-    menteeName: "정길동",
-    gradeLabel: "고등학교 2학년",
-    submittedAt: "25/12/2023",
-    subject: "수학",
-    images: [
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-    ],
-  },
-  {
-    id: "s2",
-    menteeName: "이길동",
-    gradeLabel: "고등학교 1학년",
-    submittedAt: "26/12/2023",
-    subject: "국어",
-    images: ["https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1200&q=80"],
-  },
-  {
-    id: "s3",
-    menteeName: "이길동",
-    gradeLabel: "고등학교 1학년",
-    submittedAt: "28/12/2023",
-    subject: "영어",
-    images: ["https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"],
-  },
-];
+import { mentorTodoApi } from "@/api/mentor/todo";
+import type { MentorTodo } from "@/types/mentorTodo";
 
 type Mentee = {
   key: string;
   menteeName: string;
   gradeLabel: string;
-  submissions: Submission[];
 };
 
 export default function FeedbackPage() {
@@ -112,30 +34,15 @@ export default function FeedbackPage() {
     };
   }, []);
 
-  const mentees = useMemo<Mentee[]>(() => {
-    const byName = new Map<string, Submission[]>();
-    for (const s of mock) {
-      const list = byName.get(s.menteeName) ?? [];
-      list.push(s);
-      byName.set(s.menteeName, list);
-    }
-
-    if (rawMentees.length === 0) {
-      return Array.from(byName.entries()).map(([name, submissions]) => ({
-        key: name,
-        menteeName: name,
-        gradeLabel: submissions[0]?.gradeLabel ?? "",
-        submissions,
-      }));
-    }
-
-    return rawMentees.map((m) => ({
-      key: String(m.id),
-      menteeName: m.name,
-      gradeLabel: `고등학교 ${m.grade}학년`,
-      submissions: byName.get(m.name) ?? [],
-    }));
-  }, [rawMentees]);
+  const mentees = useMemo<Mentee[]>(
+    () =>
+      rawMentees.map((m) => ({
+        key: String(m.id),
+        menteeName: m.name,
+        gradeLabel: `고등학교 ${m.grade}학년`,
+      })),
+    [rawMentees]
+  );
 
   const [selectedMenteeKey, setSelectedMenteeKey] = useState<string | null>(null);
   const selectedMentee = useMemo(
@@ -144,13 +51,14 @@ export default function FeedbackPage() {
   );
 
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-
-
-
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  
   // ====== 캐러셀 상태 ======
   const [page, setPage] = useState(0);
   const [perPage, setPerPage] = useState(1);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const menteeRowRef = useRef<HTMLDivElement | null>(null);
 
   const subjectBadge = (subject: string) => {
     switch (subject) {
@@ -165,10 +73,22 @@ export default function FeedbackPage() {
     }
   };
 
+  const toSubject = (value?: string): Subject => {
+    if (value === "국어" || value === "영어" || value === "수학") return value;
+    return "국어";
+  };
+
   const onSelectMentee = (key: string) => {
     setSelectedMenteeKey(key);
     setSelectedSubmission(null);
     setPage(0);
+  };
+
+  const scrollMentees = (dir: "left" | "right") => {
+    const el = menteeRowRef.current;
+    if (!el) return;
+    const amount = Math.max(240, Math.floor(el.clientWidth * 0.7));
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -177,6 +97,42 @@ export default function FeedbackPage() {
       setSelectedMenteeKey(mentees[0].key);
     }
   }, [mentees, selectedMenteeKey]);
+
+  useEffect(() => {
+    if (!selectedMenteeKey || !selectedMentee) {
+      setSubmissions([]);
+      return;
+    }
+    let ignore = false;
+    setIsLoadingSubmissions(true);
+    mentorTodoApi
+      .getMenteeTodos(Number(selectedMenteeKey))
+      .then((res) => {
+        if (ignore) return;
+        const items = (res.data ?? []).map((t: MentorTodo) => ({
+          id: String(t.id),
+          menteeName: selectedMentee.menteeName,
+          gradeLabel: selectedMentee.gradeLabel,
+          submittedAt: t.date,
+          subject: toSubject(t.subject),
+          title: t.title,
+          isCompleted: t.isCompleted,
+          images: [],
+        }));
+        setSubmissions(items);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSubmissions([]);
+      })
+      .finally(() => {
+        if (ignore) return;
+        setIsLoadingSubmissions(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [selectedMenteeKey, selectedMentee]);
 
   // 화면 크기에 따라 "한 줄에 보이는 카드 개수" 자동 계산
   useEffect(() => {
@@ -212,22 +168,46 @@ export default function FeedbackPage() {
   // mentee 바뀌거나 perPage 바뀌면 page가 범위 밖으로 나가는 거 방지
   useEffect(() => {
     if (!selectedMentee) return;
-    const totalPages = Math.max(1, Math.ceil(selectedMentee.submissions.length / perPage));
+    const totalPages = Math.max(1, Math.ceil(submissions.length / perPage));
     setPage((p) => Math.min(p, totalPages - 1));
-  }, [perPage, selectedMentee]);
+  }, [perPage, selectedMentee, submissions.length]);
 
   return (
     <div className="w-full">
       <div className="mb-5">
-        <div className="text-sm font-extrabold text-gray-900">과제 피드백</div>
+        <div className="text-base font-extrabold text-violet-900">과제 피드백</div>
         <div className="mt-2 text-sm text-gray-500">멘티를 선택하고 과제를 선택하면 피드백 모달이 열려요.</div>
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[260px_1fr]">
-        {/* PC: 왼쪽 멘티 리스트 */}
-        <aside className="hidden w-full rounded-3xl border border-gray-200 bg-white p-4 lg:flex lg:flex-col">
+      {/* 멘티 선택 (Home 스타일) */}
+      <section className="rounded-3xl border border-gray-200 bg-white p-4">
+        <div className="flex items-center justify-between">
           <div className="text-xs font-bold text-gray-400">멘티 목록</div>
-          <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => scrollMentees("left")}
+              className="btn-none grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              aria-label="이전 멘티"
+            >
+              <FiChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollMentees("right")}
+              className="btn-none grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              aria-label="다음 멘티"
+            >
+              <FiChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="mt-3">
+          <div
+            ref={menteeRowRef}
+            className="flex gap-3 overflow-x-auto scroll-smooth pb-2"
+            style={{ scrollbarWidth: "none" as any }}
+          >
             {mentees.map((m) => (
               <MenteeCard
                 key={m.key}
@@ -236,39 +216,20 @@ export default function FeedbackPage() {
                 variant="pc"
                 selected={m.key === selectedMenteeKey}
                 onClick={() => onSelectMentee(m.key)}
-                className="w-full shadow-none hover:shadow-none"
               />
             ))}
           </div>
-        </aside>
+        </div>
+      </section>
 
-        {/* Mobile/Tablet: 가로 스크롤 멘티 카드 */}
-        <section className="rounded-3xl border border-gray-200 bg-white p-4 lg:hidden">
-          <div className="text-xs font-bold text-gray-400">멘티 목록</div>
-          <div className="mt-3 -mx-1 overflow-x-auto pb-1">
-            <div className="flex w-max gap-3 px-1">
-              {mentees.map((m) => (
-                <MenteeCard
-                  key={m.key}
-                  name={m.menteeName}
-                  grade={m.gradeLabel}
-                  variant="mo"
-                  selected={m.key === selectedMenteeKey}
-                  onClick={() => onSelectMentee(m.key)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 오른쪽: 과제 캐러셀 */}
-        <section className="w-full min-w-0 rounded-3xl border border-gray-200 bg-white p-4 lg:flex lg:flex-col">
+      {/* 과제 캐러셀 */}
+      <section className="mt-6 w-full min-w-0 rounded-3xl border border-gray-200 bg-white p-4 lg:flex lg:flex-col">
           {!selectedMentee ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
               멘티를 선택해서 피드백을 남겨보세요.
             </div>
           ) : (() => {
-            const items = selectedMentee.submissions;
+            const items = submissions;
             const totalPages = Math.max(1, Math.ceil(items.length / perPage));
             const showNav = items.length > perPage;
 
@@ -301,9 +262,9 @@ export default function FeedbackPage() {
                 </div>
 
                 {/* 캐러셀 컨테이너 */}
-                <div ref={containerRef} className="relative mt-3">
-                  {/* 오버레이 버튼 (동그라미) */}
-                  {showNav && (
+                  <div ref={containerRef} className="relative mt-3">
+                    {/* 오버레이 버튼 (동그라미) */}
+                    {showNav && (
                     <button
                       type="button"
                       onClick={() => setPage((p) => Math.max(0, p - 1))}
@@ -347,7 +308,26 @@ export default function FeedbackPage() {
                         <button
                           key={`${s.id}-${s.submittedAt}-${idx}`}
                           type="button"
-                          onClick={() => setSelectedSubmission(s)}
+                          onClick={() => {
+                            mentorTodoApi.getTodo(Number(s.id))
+                              .then((res) => {
+                                const detail = res.data as any;
+                                const images = (detail.files ?? [])
+                                  .map((f: any) => f.url)
+                                  .filter(Boolean);
+                                setSelectedSubmission({
+                                  ...s,
+                                  subject: toSubject(detail.subject ?? s.subject),
+                                  submittedAt: detail.date ?? s.submittedAt,
+                                  title: detail.title ?? s.title,
+                                  isCompleted: detail.isCompleted ?? s.isCompleted,
+                                  images,
+                                });
+                              })
+                              .catch(() => {
+                                setSelectedSubmission(s);
+                              });
+                          }}
                           className={cn(
                             "group overflow-hidden rounded-3xl border border-gray-200 bg-white text-left",
                             "transition hover:border-violet-300 hover:shadow-md",
@@ -361,11 +341,15 @@ export default function FeedbackPage() {
                           )}
                         >
                           <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-gray-100">
-                            <img
-                              src={s.images?.[0] ?? ""}
-                              alt=""
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                            />
+                            {s.images?.[0] ? (
+                              <img
+                                src={s.images?.[0]}
+                                alt=""
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-gray-100" />
+                            )}
                             <div
                               className={cn(
                                 "absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur-sm",
@@ -375,19 +359,32 @@ export default function FeedbackPage() {
                             >
                               {s.subject}
                             </div>
+                            <div
+                              className={cn(
+                                "absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur-sm",
+                                s.isCompleted ? "bg-emerald-50/90 text-emerald-700 ring-emerald-200" : "bg-amber-50/90 text-amber-700 ring-amber-200"
+                              )}
+                            >
+                              {s.isCompleted ? "해결 완료" : "미완료"}
+                            </div>
                           </div>
 
                           <div className="p-4">
-                            <div className="text-sm font-extrabold text-gray-900">{s.subject} 과제</div>
+                            <div className="text-sm font-extrabold text-gray-900">
+                              {s.title ?? `${s.subject} 과제`}
+                            </div>
                             <div className="mt-1 text-xs text-gray-500">제출일: {s.submittedAt}</div>
                             <div className="mt-2 text-xs text-gray-500">
-                              이미지 <span className="font-bold text-gray-700">{s.images.length}</span>장
+                              이미지 <span className="font-bold text-gray-700">{s.images?.length ?? 0}</span>장
                             </div>
                           </div>
                         </button>
                       ))}
                     </div>
                   </div>
+                  {isLoadingSubmissions && (
+                    <div className="mt-3 text-xs text-gray-400">불러오는 중...</div>
+                  )}
                 </div>
 
                 <div className="mt-6 rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
@@ -397,7 +394,6 @@ export default function FeedbackPage() {
             );
           })()}
         </section>
-      </div>
 
       <FeedbackModal open={!!selectedSubmission} submission={selectedSubmission} onClose={() => setSelectedSubmission(null)} />
     </div>

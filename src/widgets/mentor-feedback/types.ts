@@ -16,5 +16,7 @@ export type Submission = {
   gradeLabel: string;
   submittedAt: string; // "25/12/2023" 같은 문자열
   subject: Subject;
+  title?: string;
+  isCompleted?: boolean;
   images: string[]; // url or local
 };

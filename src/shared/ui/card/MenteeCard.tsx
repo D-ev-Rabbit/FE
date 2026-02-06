@@ -22,6 +22,10 @@ export default function MenteeCard({
   className,
 }: Props) {
   const isMo = variant === "mo";
+  const formattedGrade =
+    grade.includes("고등학교") || grade.includes("학년")
+      ? grade
+      : `고등학교 ${grade}학년`;
 
     return (
     <button
@@ -47,7 +51,7 @@ export default function MenteeCard({
 
           {/* 학년/이름 */}
           <div className="mt-5">
-            <div className="text-sm text-gray-500">고등학교 {grade}학년</div>
+            <div className="text-sm text-gray-500">{formattedGrade}</div>
             <div className="mt-2 text-base font-bold text-gray-900">{name}</div>
           </div>
         </>
@@ -60,7 +64,7 @@ export default function MenteeCard({
 
           {/* PC: 텍스트 */}
           <div className="absolute left-20 top-1/2 -translate-y-1/2">
-            <div className="text-sm text-gray-500">{grade}</div>
+            <div className="text-sm text-gray-500">{formattedGrade}</div>
             <div className="text-base font-bold text-gray-900">{name}</div>
           </div>
         </>
