@@ -10,8 +10,8 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
-
-type SubjectKey = "korean" | "english" | "math";
+import { menteeMeApi } from "@/api/mentee/me";
+import type { MenteeSummaryResponse, MenteeSummarySubject } from "@/types/mentee";
 
 type Metric = {
   id: "studyTime" | "taskDone" | "feedbackChecked";
@@ -22,7 +22,7 @@ type Metric = {
 };
 
 type SubjectCard = {
-  key: SubjectKey;
+  key: string;
   pill: string;
   metrics: Metric[];
 };
@@ -179,128 +179,112 @@ export default function ActivitySummaryContent() {
 
   const [index, setIndex] = useState(0);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+  const [summary, setSummary] = useState<MenteeSummaryResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    menteeMeApi
+      .getSummary()
+      .then((res) => {
+        if (ignore) return;
+        setSummary(res.data);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSummary(null);
+      })
+      .finally(() => {
+        if (ignore) return;
+        setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const formatStudyTimeCaps = (seconds: number) => {
+    const totalMinutes = Math.max(0, Math.round(seconds / 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const remain = totalMinutes % 60;
+    if (hours === 0) return `${remain}M`;
+    if (remain === 0) return `${hours}H`;
+    return `${hours}H ${remain}M`;
+  };
+
+  const formatRate = (value: number) => {
+    const pct = Number.isFinite(value) ? Math.round(value * 100) : 0;
+    return `${Math.max(0, Math.min(100, pct))}%`;
+  };
+
+  const subjectOrder = ["국어", "영어", "수학"];
+  const subjectLabel = (name: string) => {
+    if (name === "KOREAN") return "국어";
+    if (name === "ENGLISH") return "영어";
+    if (name === "MATH") return "수학";
+    return name;
+  };
+  const subjectEntries = useMemo(() => {
+    const subjects = summary?.subjects ?? {};
+    const entries = Object.entries(subjects);
+    if (entries.length === 0) {
+      return subjectOrder.map((name) => [name, null] as const);
+    }
+    const ordered = subjectOrder
+      .filter((name) => subjects[name])
+      .map((name) => [name, subjects[name]] as const);
+    const rest = entries
+      .filter(([name]) => !subjectOrder.includes(name))
+      .map(([name, value]) => [subjectLabel(name), value] as const);
+    return [...ordered, ...rest];
+  }, [summary]);
 
   const cards: SubjectCard[] = useMemo(
-    () => [
-      {
-        key: "korean",
-        pill: "국어",
-        metrics: [
-          {
-            id: "studyTime",
-            label: "총 학습 시간",
-            valueText: "90H 45M",
-            helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
-                <FaRegClock size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "taskDone",
-            label: "과제 완료율",
-            valueText: "70%",
-            helpText: "멘토가 배정한 과제 중 완료 처리된 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
-                <FaCheckCircle size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "feedbackChecked",
-            label: "피드백 확인율",
-            valueText: "85%",
-            helpText: "멘토 피드백을 ‘확인함’으로 처리한 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
-                <FaBookOpen size={18} />
-              </div>
-            ),
-          },
-        ],
-      },
-      {
-        key: "english",
-        pill: "영어",
-        metrics: [
-          {
-            id: "studyTime",
-            label: "총 학습 시간",
-            valueText: "42H 10M",
-            helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
-                <FaRegClock size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "taskDone",
-            label: "과제 완료율",
-            valueText: "61%",
-            helpText: "멘토가 배정한 과제 중 완료 처리된 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
-                <FaCheckCircle size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "feedbackChecked",
-            label: "피드백 확인율",
-            valueText: "78%",
-            helpText: "멘토 피드백을 ‘확인함’으로 처리한 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
-                <FaBookOpen size={18} />
-              </div>
-            ),
-          },
-        ],
-      },
-      {
-        key: "math",
-        pill: "수학",
-        metrics: [
-          {
-            id: "studyTime",
-            label: "총 학습 시간",
-            valueText: "58H 05M",
-            helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
-                <FaRegClock size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "taskDone",
-            label: "과제 완료율",
-            valueText: "74%",
-            helpText: "멘토가 배정한 과제 중 완료 처리된 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
-                <FaCheckCircle size={18} />
-              </div>
-            ),
-          },
-          {
-            id: "feedbackChecked",
-            label: "피드백 확인율",
-            valueText: "82%",
-            helpText: "멘토 피드백을 ‘확인함’으로 처리한 비율입니다.",
-            icon: (
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
-                <FaBookOpen size={18} />
-              </div>
-            ),
-          },
-        ],
-      },
-    ],
-    []
+    () =>
+      subjectEntries.map(([name, data]) => {
+        const metric = data as MenteeSummarySubject | null;
+        return {
+          key: name,
+          pill: name,
+          metrics: [
+            {
+              id: "studyTime",
+              label: "총 학습 시간",
+              valueText: formatStudyTimeCaps(metric?.totalStudySeconds ?? 0),
+              helpText: "해당 과목에서 누적된 학습 시간의 합계입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sky-100 text-sky-600">
+                  <FaRegClock size={18} />
+                </div>
+              ),
+            },
+            {
+              id: "taskDone",
+              label: "과제 완료율",
+              valueText: formatRate(metric?.todoCompletionRate ?? 0),
+              helpText: "멘토가 배정한 과제 중 완료 처리된 비율입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+                  <FaCheckCircle size={18} />
+                </div>
+              ),
+            },
+            {
+              id: "feedbackChecked",
+              label: "피드백 확인율",
+              valueText: formatRate(metric?.feedbackReadRate ?? 0),
+              helpText: "멘토 피드백을 ‘확인함’으로 처리한 비율입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
+                  <FaBookOpen size={18} />
+                </div>
+              ),
+            },
+          ],
+        } as SubjectCard;
+      }),
+    [subjectEntries]
   );
 
   useEffect(() => setOpenTooltipId(null), [index]);
@@ -435,7 +419,7 @@ export default function ActivitySummaryContent() {
       </div>
 
       <div className="mt-2 mr-2 text-right text-xs text-gray-400">
-        기간: 가입 이후 ~ 현재
+        {summary ? `기간: ${summary.from} ~ ${summary.to}` : "기간: -"}
       </div>
 
       <div className="px-5 pb-5 pt-3">

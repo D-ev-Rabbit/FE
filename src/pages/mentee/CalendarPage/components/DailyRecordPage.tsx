@@ -726,12 +726,18 @@ export default function DailyRecordPage({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          setRecordsByDate((prev) => ({
-                            ...prev,
-                            [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
-                          }))
-                        }
+                        onClick={() => {
+                          if (!record.sessionId) return;
+                          menteeStudySessionApi
+                            .delete(record.sessionId)
+                            .then(() => {
+                              setRecordsByDate((prev) => ({
+                                ...prev,
+                                [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
+                              }));
+                            })
+                            .catch(() => {});
+                        }}
                         disabled={readOnly}
                         className="rounded-full border border-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-500"
                         aria-label="기록 삭제"
