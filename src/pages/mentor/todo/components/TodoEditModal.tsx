@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import ModalBase from "@/shared/ui/modal/ModalBase"
 import type { TodoItem } from "./TodoListTable"
+import type { MentorTodoFile } from "@/api/file"
 import { FiUpload } from "react-icons/fi"
 
 type Props = {
   open: boolean
   mode: "create" | "edit"
   initial?: TodoItem | null
+  files?: MentorTodoFile[]
   onClose: () => void
   onSave: (payload: {
     title: string;
@@ -20,14 +22,14 @@ type Props = {
 const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 
-export default function TodoEditModal({ open, mode, initial, onClose, onSave, onDelete }: Props) {
+export default function TodoEditModal({ open, mode, initial, files = [], onClose, onSave, onDelete }: Props) {
   const defaultDate = useMemo(() => (initial?.date ? initial.date : toYmd(new Date())), [initial])
 
   const [title, setTitle] = useState("")
   const [date, setDate] = useState(defaultDate)
   const [subject, setSubject] = useState<TodoItem["subject"]>(initial?.subject ?? "KOREAN")
 
-  // ✅ 파일 선택 상태
+  // 파일 선택 상태
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
@@ -37,13 +39,22 @@ export default function TodoEditModal({ open, mode, initial, onClose, onSave, on
     setDate(initial?.date ?? defaultDate)
     setSubject(initial?.subject ?? "KOREAN")
 
-    // ✅ 모달 열릴 때마다 파일 선택 초기화
+    // 모달 열릴 때마다 파일 선택 초기화
     setSelectedFile(null)
   }, [open, initial, defaultDate])
 
   const canSave = title.trim().length > 0 && date.length === 10
 
   const openFilePicker = () => fileRef.current?.click()
+  const getFileLabel = (url: string) => {
+    try {
+      const parts = url.split("/");
+      const last = parts[parts.length - 1] ?? "파일";
+      return decodeURIComponent(last);
+    } catch {
+      return "파일";
+    }
+  };
 
   return (
     <ModalBase open={open} onClose={onClose}>
@@ -117,9 +128,28 @@ export default function TodoEditModal({ open, mode, initial, onClose, onSave, on
             </div>
           </div>
 
-          {/* ✅ 파일 업로드(선택) UI */}
+          {/* 파일 업로드(선택) UI */}
           <div>
             <div className="mb-2 text-sm font-semibold text-gray-700 pt-2">과제 파일</div>
+
+            {mode === "edit" && (
+              <div className="mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                {files.length === 0 ? (
+                  "등록된 파일이 없습니다."
+                ) : (
+                  <ul className="space-y-1">
+                    {files.map((file) => (
+                      <li key={file.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{getFileLabel(file.url)}</span>
+                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                          {file.type}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <button
