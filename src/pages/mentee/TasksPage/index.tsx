@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import DateNavigator from "./components/DateNavigator";
-import FeedbackSummaryCard from "./components/FeedbackSummaryCard";
 import SubjectSection from "./components/SubjectSection";
 import type { FeedbackSummary, SubjectSection as SubjectSectionType } from "./types/tasks";
 import { addDays, formatKoreanDate, toDateKey } from "./utils/date";
@@ -8,6 +7,13 @@ import { getMenteeTodos } from "@/api/mentee/todo";
 import type { MenteeTodo } from "@/types/planner";
 
 const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
+const normalizeSubject = (value?: string) => {
+  if (!value) return "기타";
+  if (value === "KOREAN") return "국어";
+  if (value === "ENGLISH") return "영어";
+  if (value === "MATH") return "수학";
+  return value;
+};
 
 export default function MenteeTasksPage() {
   const baseDate = useMemo(() => new Date(), []);
@@ -41,7 +47,7 @@ export default function MenteeTasksPage() {
     });
 
     todos.forEach((todo) => {
-      const subject = todo.subject || "기타";
+      const subject = normalizeSubject(todo.subject);
       if (!bySubject.has(subject)) {
         bySubject.set(subject, { id: subject, label: subject, tasks: [] });
       }
@@ -71,9 +77,6 @@ export default function MenteeTasksPage() {
         onPrev={() => setSelectedDate((prev) => addDays(prev, -1))}
         onNext={() => setSelectedDate((prev) => addDays(prev, 1))}
       />
-
-      <FeedbackSummaryCard items={feedbacks} />
-
       <div className="space-y-6">
         {sections.map((section) => (
           <SubjectSection key={section.id} section={section} />

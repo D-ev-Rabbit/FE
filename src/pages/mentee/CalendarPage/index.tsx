@@ -16,10 +16,25 @@ import type { MenteeTodo, SubjectGroup } from "@/types/planner";
 import { menteeStudySessionApi } from "@/api/mentee/studySession";
 import type { StudySession } from "@/types/studySession";
 import { menteePlannerApi } from "@/api/mentee/planner";
+import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 
 export default function MenteeCalendarPage() {
   const navigate = useNavigate();
   const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
+  const normalizeSubject = (value?: string) => {
+    if (!value) return "기타";
+    if (value === "KOREAN") return "국어";
+    if (value === "ENGLISH") return "영어";
+    if (value === "MATH") return "수학";
+    return value;
+  };
+  const toApiSubject = (value?: string) => {
+    if (!value) return "";
+    if (value === "국어") return "KOREAN";
+    if (value === "영어") return "ENGLISH";
+    if (value === "수학") return "MATH";
+    return value; // already API code or custom
+  };
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(() => new Date());
@@ -64,7 +79,6 @@ export default function MenteeCalendarPage() {
     monthGrid,
     totalCount,
     doneCount,
-    progress,
     weekStart,
     weekDays,
     setViewMode,
@@ -108,6 +122,11 @@ export default function MenteeCalendarPage() {
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
   const [mentorComment, setMentorComment] = useState("");
   const [plannerTodoCounts, setPlannerTodoCounts] = useState<{ total: number; completed: number } | null>(null);
+  const [errorModal, setErrorModal] = useState<{ open: boolean; title: string; description?: string }>({
+    open: false,
+    title: "",
+    description: "",
+  });
   const [weeklySessionsByDate, setWeeklySessionsByDate] = useState<Record<string, StudySession[]>>(
     {}
   );
@@ -122,7 +141,8 @@ export default function MenteeCalendarPage() {
     const record: Record<string, number> = {};
     for (const session of studySessions) {
       const minutes = Math.max(1, Math.ceil(session.durationSeconds / 60));
-      record[session.subject] = (record[session.subject] ?? 0) + minutes;
+      const key = normalizeSubject(session.subject);
+      record[key] = (record[key] ?? 0) + minutes;
     }
     return record;
   }, [studySessions]);
@@ -226,7 +246,7 @@ export default function MenteeCalendarPage() {
       await createMenteeTodo({
         title,
         date: currentDateKey,          //  선택된 날짜
-        subject: selectedSubject,      //  모달에서 선택된 과목명
+        subject: toApiSubject(selectedSubject),      //  모달에서 선택된 과목명
         goal: "",
         isCompleted: false,
       });
@@ -268,7 +288,7 @@ export default function MenteeCalendarPage() {
       await patchMenteeTodo(todoId, {
         title: found.title,
         date: found.date,
-        subject: found.subject,
+        subject: toApiSubject(found.subject),
         goal: "",
         isCompleted: !found.isCompleted,
       });
@@ -284,8 +304,20 @@ export default function MenteeCalendarPage() {
 
   //  삭제
   const handleDeleteTodo = async (task: SubjectGroup["tasks"][number]) => {
-    await deleteMenteeTodo(task.todoId);
-    await refetchTodos(currentDateKey);
+    try {
+      await deleteMenteeTodo(task.todoId);
+      await refetchTodos(currentDateKey);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
+      setErrorModal({
+        open: true,
+        title: "삭제 실패",
+        description: typeof message === "string" ? message : "삭제에 실패했어요. 잠시 후 다시 시도해주세요.",
+      });
+    }
   };
 
   //  수정(제목 수정) - TaskActionModal의 saveTaskEdit에 연결할 예정
@@ -299,7 +331,7 @@ export default function MenteeCalendarPage() {
     await patchMenteeTodo(todo.id, {
       title,
       date: todo.date,
-      subject: todo.subject,
+      subject: toApiSubject(todo.subject),
       goal: todo.goal ?? "",
       isCompleted: todo.isCompleted,
     });
@@ -322,7 +354,7 @@ export default function MenteeCalendarPage() {
       await patchMenteeTodo(todoId, {
         title: prevTodo.title,
         date: patch.date ?? prevTodo.date,
-        subject: prevTodo.subject,
+        subject: toApiSubject(prevTodo.subject),
         goal: "",
         isCompleted: prevTodo.isCompleted,
       });
@@ -375,7 +407,7 @@ export default function MenteeCalendarPage() {
 
     // 2) todo를 subject별로 밀어넣기 (기본 과목 외 subject도 자동 추가)
     for (const todo of todos) {
-      const key = todo.subject || "기타";
+      const key = normalizeSubject(todo.subject);
       if (!bySubject.has(key)) {
         bySubject.set(key, { id: key, name: key, tasks: [] });
       }
@@ -645,6 +677,17 @@ export default function MenteeCalendarPage() {
         onClose={() => setDailyNoteOpen(false)}
         onChangeNoteText={setDailyNoteText}
         onSave={saveDailyNote}
+      />
+
+      <ConfirmModal
+        open={errorModal.open}
+        variant="error"
+        title={errorModal.title}
+        description={errorModal.description}
+        onCancel={() => setErrorModal((prev) => ({ ...prev, open: false }))}
+        onConfirm={() => setErrorModal((prev) => ({ ...prev, open: false }))}
+        showCancel={false}
+        confirmText="확인"
       />
 
       <DatePickerModal

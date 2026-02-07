@@ -7,7 +7,12 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee } from "@/types/mentor";
 import { mentorTodoApi } from "@/api/mentor/todo";
+import { getMenteeTodo } from "@/api/mentee/todo";
 import type { MentorTodo } from "@/types/mentorTodo";
+import SubjectFilter, { type Subject as TodoSubject } from "@/pages/mentor/components/subjectFilter";
+import ModalBase from "@/shared/ui/modal/ModalBase";
+import CalendarPopover from "@/pages/mentor/components/CalendarPopover";
+import { FaRegCalendar } from "react-icons/fa";
 
 type Mentee = {
   key: string;
@@ -53,6 +58,14 @@ export default function FeedbackPage() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [subjectFilter, setSubjectFilter] = useState<TodoSubject>("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "COMPLETED" | "INCOMPLETE">("ALL");
+
+  const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(
+    selectedDate.getDate()
+  ).padStart(2, "0")}`;
   
   // ====== 캐러셀 상태 ======
   const [page, setPage] = useState(0);
@@ -76,6 +89,11 @@ export default function FeedbackPage() {
   const toSubject = (value?: string): Subject => {
     if (value === "국어" || value === "영어" || value === "수학") return value;
     return "국어";
+  };
+
+  const subjectToApi = (value: TodoSubject | undefined) => {
+    if (!value || value === "ALL") return undefined;
+    return value; // KOREAN | ENGLISH | MATH
   };
 
   const onSelectMentee = (key: string) => {
@@ -106,7 +124,12 @@ export default function FeedbackPage() {
     let ignore = false;
     setIsLoadingSubmissions(true);
     mentorTodoApi
-      .getMenteeTodos(Number(selectedMenteeKey))
+      .getMenteeTodos(Number(selectedMenteeKey), {
+        date: selectedDateStr,
+        subject: subjectToApi(subjectFilter),
+        isCompleted:
+          statusFilter === "ALL" ? undefined : statusFilter === "COMPLETED",
+      })
       .then((res) => {
         if (ignore) return;
         const items = (res.data ?? []).map((t: MentorTodo) => ({
@@ -117,7 +140,8 @@ export default function FeedbackPage() {
           subject: toSubject(t.subject),
           title: t.title,
           isCompleted: t.isCompleted,
-          images: [],
+          menteeId: Number(selectedMenteeKey),
+          files: [],
         }));
         setSubmissions(items);
       })
@@ -132,7 +156,7 @@ export default function FeedbackPage() {
     return () => {
       ignore = true;
     };
-  }, [selectedMenteeKey, selectedMentee]);
+  }, [selectedMenteeKey, selectedMentee, selectedDateStr, subjectFilter, statusFilter]);
 
   // 화면 크기에 따라 "한 줄에 보이는 카드 개수" 자동 계산
   useEffect(() => {
@@ -241,6 +265,64 @@ export default function FeedbackPage() {
 
             return (
               <>
+                <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100">
+                        <FaRegCalendar />
+                      </span>
+                      <span>
+                        {selectedDate.toLocaleDateString("ko-KR", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarOpen((prev) => !prev)}
+                        className="ml-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50"
+                      >
+                        날짜 선택
+                      </button>
+                    </div>
+
+                    <SubjectFilter value={subjectFilter} onChange={setSubjectFilter} />
+                    <div className="hidden items-center justify-center lg:flex">
+                      <span className="text-gray-300">|</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {[
+                        { key: "ALL", label: "전체" },
+                        { key: "COMPLETED", label: "해결완료" },
+                        { key: "INCOMPLETE", label: "미완료" },
+                      ].map((item) => {
+                        const active = statusFilter === item.key;
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setStatusFilter(item.key as any)}
+                            className={cn(
+                              "inline-flex items-center justify-center whitespace-nowrap",
+                              "h-7 px-5 rounded-full border",
+                              "text-sm font-semibold leading-none",
+                              "min-w-[64px]",
+                              "transition-colors",
+                              active
+                                ? "border-violet-600 bg-violet-50 text-violet-700"
+                                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold text-gray-400">과제 목록</div>
 
@@ -262,126 +344,148 @@ export default function FeedbackPage() {
                 </div>
 
                 {/* 캐러셀 컨테이너 */}
-                  <div ref={containerRef} className="relative mt-3">
-                    {/* 오버레이 버튼 (동그라미) */}
-                    {showNav && (
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.max(0, p - 1))}
-                      disabled={!canPrev}
-                      className={cn(
-                        "absolute left-2 top-1/2 z-10 -translate-y-1/2",
-                        "flex h-10 w-10 items-center justify-center rounded-full",
-                        "bg-white/90 shadow-md ring-1 ring-gray-200 backdrop-blur",
-                        "transition hover:bg-white",
-                        !canPrev && "pointer-events-none opacity-40"
-                      )}
-                      aria-label="이전 과제"
-                    >
-                      <FiChevronLeft className="h-5 w-5 shrink-0 text-gray-700" />
-                    </button>
-                  )}
-
-                  {/* 오버레이 버튼 (동그라미) */}
-                  {showNav && (
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                      disabled={!canNext}
-                      className={cn(
-                        "absolute right-2 top-1/2 z-10 -translate-y-1/2",
-                        "flex h-10 w-10 items-center justify-center rounded-full",
-                        "bg-white/90 shadow-md ring-1 ring-gray-200 backdrop-blur",
-                        "transition hover:bg-white",
-                        !canNext && "pointer-events-none opacity-40"
-                      )}
-                      aria-label="다음 과제"
-                    >
-                      <FiChevronRight className="h-5 w-5 shrink-0 text-gray-700" />
-                    </button>
-                  )}
-
-                  {/* 한 줄만 보이게: flex + overflow-hidden */}
-                  <div className="overflow-hidden">
-                    <div className="flex gap-4">
-                      {visible.map((s, idx) => (
+                <div ref={containerRef} className="relative mt-3">
+                  {items.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+                      해당 조건의 과제가 없습니다.
+                    </div>
+                  ) : (
+                    <>
+                      {/* 오버레이 버튼 (동그라미) */}
+                      {showNav && (
                         <button
-                          key={`${s.id}-${s.submittedAt}-${idx}`}
                           type="button"
-                          onClick={() => {
-                            mentorTodoApi.getTodo(Number(s.id))
-                              .then((res) => {
-                                const detail = res.data as any;
-                                const images = (detail.files ?? [])
-                                  .map((f: any) => f.url)
-                                  .filter(Boolean);
-                                setSelectedSubmission({
-                                  ...s,
-                                  subject: toSubject(detail.subject ?? s.subject),
-                                  submittedAt: detail.date ?? s.submittedAt,
-                                  title: detail.title ?? s.title,
-                                  isCompleted: detail.isCompleted ?? s.isCompleted,
-                                  images,
-                                });
-                              })
-                              .catch(() => {
-                                setSelectedSubmission(s);
-                              });
-                          }}
+                          onClick={() => setPage((p) => Math.max(0, p - 1))}
+                          disabled={!canPrev}
                           className={cn(
-                            "group overflow-hidden rounded-3xl border border-gray-200 bg-white text-left",
-                            "transition hover:border-violet-300 hover:shadow-md",
-                            "shrink-0",
-                            "w-full",
-                            perPage === 1
-                              ? "basis-full"
-                              : perPage === 2
-                                ? "basis-[calc(50%-8px)]"
-                                : "basis-[calc(33.333%-10.7px)]"
+                            "absolute left-2 top-1/2 z-10 -translate-y-1/2",
+                            "flex h-10 w-10 items-center justify-center rounded-full",
+                            "bg-white/90 shadow-md ring-1 ring-gray-200 backdrop-blur",
+                            "transition hover:bg-white",
+                            !canPrev && "pointer-events-none opacity-40"
                           )}
+                          aria-label="이전 과제"
                         >
-                          <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-gray-100">
-                            {s.images?.[0] ? (
-                              <img
-                                src={s.images?.[0]}
-                                alt=""
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                              />
-                            ) : (
-                              <div className="h-full w-full bg-gray-100" />
-                            )}
-                            <div
+                          <FiChevronLeft className="h-5 w-5 shrink-0 text-gray-700" />
+                        </button>
+                      )}
+
+                      {/* 오버레이 버튼 (동그라미) */}
+                      {showNav && (
+                        <button
+                          type="button"
+                          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                          disabled={!canNext}
+                          className={cn(
+                            "absolute right-2 top-1/2 z-10 -translate-y-1/2",
+                            "flex h-10 w-10 items-center justify-center rounded-full",
+                            "bg-white/90 shadow-md ring-1 ring-gray-200 backdrop-blur",
+                            "transition hover:bg-white",
+                            !canNext && "pointer-events-none opacity-40"
+                          )}
+                          aria-label="다음 과제"
+                        >
+                          <FiChevronRight className="h-5 w-5 shrink-0 text-gray-700" />
+                        </button>
+                      )}
+
+                      {/* 한 줄만 보이게: flex + overflow-hidden */}
+                      <div className="overflow-hidden">
+                        <div className="flex gap-4">
+                          {visible.map((s, idx) => (
+                            <button
+                              key={`${s.id}-${s.submittedAt}-${idx}`}
+                              type="button"
+                              onClick={() => {
+                                Promise.allSettled([
+                                  mentorTodoApi.getTodo(Number(s.id)),
+                                  getMenteeTodo(Number(s.id)),
+                                ])
+                                  .then(([mentorRes, menteeRes]) => {
+                                    const mentorDetail =
+                                      mentorRes.status === "fulfilled" ? (mentorRes.value.data as any) : null;
+                                    const menteeDetail =
+                                      menteeRes.status === "fulfilled" ? (menteeRes.value.data as any) : null;
+                                    const detail = mentorDetail ?? menteeDetail ?? {};
+                                    const filesSource = menteeDetail?.files ?? detail.files ?? [];
+                                    const files = (filesSource ?? [])
+                                      .map((f: any) => ({
+                                        fileId: f.fileId ?? f.id,
+                                        url: f.url,
+                                        feedbacks: f.feedbacks ?? [],
+                                      }))
+                                      .filter((f: any) => Boolean(f.url) && Boolean(f.fileId));
+                                    setSelectedSubmission({
+                                      ...s,
+                                      subject: toSubject(detail.subject ?? s.subject),
+                                      submittedAt: detail.date ?? s.submittedAt,
+                                      title: detail.title ?? s.title,
+                                      goal: detail.goal ?? s.goal,
+                                      isCompleted: detail.isCompleted ?? s.isCompleted,
+                                      files,
+                                    });
+                                  })
+                                  .catch(() => {
+                                    setSelectedSubmission(s);
+                                  });
+                              }}
                               className={cn(
-                                "absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur-sm",
-                                subjectBadge(s.subject),
-                                "bg-white/80"
+                                "group overflow-hidden rounded-3xl border border-gray-200 bg-white text-left",
+                                "transition hover:border-violet-300 hover:shadow-md",
+                                "shrink-0",
+                                "w-full",
+                                perPage === 1
+                                  ? "basis-full"
+                                  : perPage === 2
+                                    ? "basis-[calc(50%-8px)]"
+                                    : "basis-[calc(33.333%-10.7px)]"
                               )}
                             >
-                              {s.subject}
-                            </div>
+                              <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-gray-100">
+                                {s.files?.[0]?.url ? (
+                                  <img
+                                    src={s.files?.[0]?.url}
+                                    alt=""
+                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full bg-gray-100" />
+                                )}
+                                <div
+                                  className={cn(
+                                    "absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur-sm",
+                                    subjectBadge(s.subject),
+                                    "bg-white/80"
+                                  )}
+                                >
+                                  {s.subject}
+                                </div>
                             <div
                               className={cn(
                                 "absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur-sm",
-                                s.isCompleted ? "bg-emerald-50/90 text-emerald-700 ring-emerald-200" : "bg-amber-50/90 text-amber-700 ring-amber-200"
+                                "bg-white/80",
+                                s.isCompleted ? "text-emerald-700 ring-emerald-200" : "text-amber-700 ring-amber-200"
                               )}
                             >
                               {s.isCompleted ? "해결 완료" : "미완료"}
                             </div>
-                          </div>
+                              </div>
 
-                          <div className="p-4">
-                            <div className="text-sm font-extrabold text-gray-900">
-                              {s.title ?? `${s.subject} 과제`}
-                            </div>
-                            <div className="mt-1 text-xs text-gray-500">제출일: {s.submittedAt}</div>
-                            <div className="mt-2 text-xs text-gray-500">
-                              이미지 <span className="font-bold text-gray-700">{s.images?.length ?? 0}</span>장
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                              <div className="p-4">
+                                <div className="text-sm font-extrabold text-gray-900">
+                                  {s.title ?? `${s.subject} 과제`}
+                                </div>
+                                <div className="mt-1 text-xs text-gray-500">제출일: {s.submittedAt}</div>
+                                <div className="mt-2 text-xs text-gray-500">
+                                  이미지 <span className="font-bold text-gray-700">{s.files?.length ?? 0}</span>장
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                   {isLoadingSubmissions && (
                     <div className="mt-3 text-xs text-gray-400">불러오는 중...</div>
                   )}
@@ -395,7 +499,28 @@ export default function FeedbackPage() {
           })()}
         </section>
 
-      <FeedbackModal open={!!selectedSubmission} submission={selectedSubmission} onClose={() => setSelectedSubmission(null)} />
+      <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
+        <div className="relative">
+          <CalendarPopover
+            selected={selectedDate}
+            onSelect={(date) => {
+              setSelectedDate(date);
+              setCalendarOpen(false);
+            }}
+            onClose={() => setCalendarOpen(false)}
+          />
+        </div>
+      </ModalBase>
+
+      <FeedbackModal
+        open={!!selectedSubmission}
+        submission={selectedSubmission}
+        onClose={() => setSelectedSubmission(null)}
+        onSaved={(id) => {
+          setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, isCompleted: true } : s)));
+          setSelectedSubmission((prev) => (prev && prev.id === id ? { ...prev, isCompleted: true } : prev));
+        }}
+      />
     </div>
   );
 }

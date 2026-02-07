@@ -1,7 +1,6 @@
 import { cn } from "@/shared/lib/cn";
 import { HiOutlineX } from "react-icons/hi";
 import type { Notice } from "./types";
-import { mockNotices } from "./mock";
 import { FiBookOpen, FiAlertCircle, FiMessageSquare, FiFileText } from "react-icons/fi";
 import type React from "react";
 import type { NotificationType } from "@/types/notification";
@@ -46,13 +45,14 @@ export default function NotificationPopup({
   open,
   onClose,
   className,
-  notices = mockNotices,
+  notices,
   onNoticeClick,
 }: Props) {
   if (!open) return null;
 
-  const grouped = groupByType(notices);
-  const totalCount = notices.length;
+  const safeNotices = notices ?? [];
+  const grouped = groupByType(safeNotices);
+  const totalCount = safeNotices.length;
 
   const orderedTypes: NotificationType[] = [
     "TODO_COMMENT",

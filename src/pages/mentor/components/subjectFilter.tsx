@@ -14,7 +14,7 @@ const subjectChipClass = (key: Subject, active: boolean) => {
   if (key === "KOREAN") return "border-yellow-300 bg-yellow-50 text-yellow-800";
   if (key === "ENGLISH") return "border-rose-300 bg-rose-50 text-rose-800";
   if (key === "MATH") return "border-indigo-300 bg-indigo-50 text-indigo-800";
-  return "border-gray-900 text-gray-900";
+  return "border-violet-600 bg-violet-50 text-violet-700";
 };
 
 type Props = {

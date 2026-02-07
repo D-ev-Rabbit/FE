@@ -50,6 +50,7 @@ export default function MobileHeader({
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [noticeCount, setNoticeCount] = useState(0);
 
   const profileRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -77,16 +78,35 @@ export default function MobileHeader({
         if (ignore) return;
         const items = res.data.items ?? [];
         setNotices(items.map(toNotice));
+        setNoticeCount(items.length);
       })
       .catch(() => {
         if (ignore) return;
         setNotices([]);
+        setNoticeCount(0);
       });
 
     return () => {
       ignore = true;
     };
   }, [notifOpen]);
+
+  useEffect(() => {
+    let ignore = false;
+    menteeNotificationApi.getNotifications()
+      .then((res) => {
+        if (ignore) return;
+        const items = res.data.items ?? [];
+        setNoticeCount(items.length);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setNoticeCount(0);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   /* 로그아웃 */
   const handleLogout = () => {
@@ -122,7 +142,12 @@ export default function MobileHeader({
               className="btn-none relative flex items-center justify-center rounded-full"
               aria-label="알림"
             >
-              <HiOutlineBell size={18} className="text-gray-800" />
+              <span className="relative inline-flex">
+                <HiOutlineBell size={20} className="text-gray-800" />
+                {noticeCount > 0 && (
+                  <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-red-500" />
+                )}
+              </span>
             </button>
 
             <NotificationPopup
@@ -134,6 +159,7 @@ export default function MobileHeader({
                   menteeNotificationApi.markRead(Number(notice.id))
                     .then(() => {
                       setNotices((prev) => prev.filter((n) => n.id !== notice.id));
+                      setNoticeCount((prev) => Math.max(0, prev - 1));
                     })
                     .catch(() => {
                       // ignore failures to keep UI responsive

@@ -14,15 +14,18 @@ import {
     FiEyeOff,
 } from "react-icons/fi";
 import type { Pin, Submission, ToolMode, PinsByImage } from "@/widgets/mentor-feedback/types";
+import { fileApi } from "@/api/file";
+import { mentorTodoApi } from "@/api/mentor/todo";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 
 type Props = {
     open: boolean;
     onClose: () => void;
     submission: Submission | null;
+    onSaved?: (id: string) => void;
 };
 
-export default function FeedbackModal({ open, onClose, submission }: Props) {
+export default function FeedbackModal({ open, onClose, submission, onSaved }: Props) {
     const [activeImageIdx, setActiveImageIdx] = useState(0);
     const [mode, setMode] = useState<ToolMode>("pin");
     const [overallComment, setOverallComment] = useState("");
@@ -43,6 +46,11 @@ export default function FeedbackModal({ open, onClose, submission }: Props) {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [showPins, setShowPins] = useState(true);
+    const [saveError, setSaveError] = useState<{ open: boolean; title: string; description?: string }>({
+        open: false,
+        title: "",
+        description: "",
+    });
 
     // 모바일 COMMENT 바텀시트
     const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
@@ -57,7 +65,7 @@ export default function FeedbackModal({ open, onClose, submission }: Props) {
 
     const imgSrc = useMemo(() => {
         if (!submission) return "";
-        return submission.images[activeImageIdx] ?? "";
+        return submission.files[activeImageIdx]?.url ?? "";
     }, [submission, activeImageIdx]);
 
     // 현재 이미지의 핀들
@@ -68,6 +76,7 @@ export default function FeedbackModal({ open, onClose, submission }: Props) {
     // submission 바뀌면 초기화(실서비스에서는 서버 데이터로 세팅)
     useEffect(() => {
         if (!open || !submission) return;
+        let ignore = false;
 
         setActiveImageIdx(0);
         setMode("pin");
@@ -86,6 +95,46 @@ export default function FeedbackModal({ open, onClose, submission }: Props) {
         setShowPins(true);
 
         setIsMobileSheetOpen(false);
+
+        if (submission.files.length > 0) {
+            Promise.allSettled(submission.files.map((file) => fileApi.getMentorFeedback(file.fileId)))
+                .then((results) => {
+                    if (ignore) return;
+                    let latestCommentId = -1;
+                    let initialComment = "";
+                    const nextPins: PinsByImage = {};
+
+                    results.forEach((res, fileIndex) => {
+                        if (res.status !== "fulfilled") return;
+                        const data = res.value.data?.data;
+                        if (!data) return;
+                        try {
+                            const parsed = JSON.parse(data);
+                            const pinsFromData =
+                                parsed.pinsByImage?.find((p: any) => p.imageIndex === fileIndex)?.pins ??
+                                parsed.pinsByImage?.[0]?.pins ??
+                                [];
+                            if (pinsFromData?.length) {
+                                nextPins[fileIndex] = pinsFromData;
+                            }
+                            const id = res.value.data?.id ?? 0;
+                            if (parsed.overallComment && id >= latestCommentId) {
+                                latestCommentId = id;
+                                initialComment = parsed.overallComment;
+                            }
+                        } catch {
+                            return;
+                        }
+                    });
+
+                    setOverallComment(initialComment ?? "");
+                    setPinsByImage(nextPins);
+                });
+        }
+
+        return () => {
+            ignore = true;
+        };
     }, [open, submission]);
 
     useEffect(() => {
@@ -245,12 +294,77 @@ if (pinEl) {
         setDraggingNumber(null);
     };
 
+    const toApiSubject = (value: Submission["subject"]) => {
+        if (value === "국어") return "국어";
+        if (value === "영어") return "영어";
+        if (value === "수학") return "수학";
+        return value;
+    };
+
     const save = async () => {
+        if (!submission) return;
         setSaving(true);
-        await new Promise((r) => setTimeout(r, 400)); // 데모
-        setSaving(false);
-        setDirty(false);
-        setSaved(true);
+        try {
+            if (submission.files.length === 0) {
+                setSaveError({
+                    open: true,
+                    title: "저장 실패",
+                    description: "파일 목록을 불러오지 못했습니다. 다시 열어주세요.",
+                });
+                return;
+            }
+            const pinsByImagePayload = Array.from({ length: submission.files.length }).map((_, index) => ({
+                imageIndex: index,
+                pins: (pinsByImage[index] ?? []).map((p) => ({
+                    number: p.number,
+                    x: p.x,
+                    y: p.y,
+                    text: p.text ?? "",
+                })),
+            }));
+
+            const payload = {
+                menteeId: submission.menteeId ?? null,
+                submissionId: submission.id,
+                overallComment: overallComment ?? "",
+                pinsByImage: pinsByImagePayload,
+            };
+
+            await Promise.all(
+                submission.files.map((file) =>
+                    fileApi.postMentorFeedback(file.fileId, { data: JSON.stringify(payload) })
+                )
+            );
+            const updateRes = await mentorTodoApi.updateTodo(Number(submission.id), {
+                title: submission.title ?? "과제",
+                date: submission.submittedAt,
+                subject: toApiSubject(submission.subject),
+                goal: submission.goal ?? "",
+                isCompleted: true,
+            });
+            if (!updateRes.data?.isCompleted) {
+                const recheck = await mentorTodoApi.getTodo(Number(submission.id));
+                if (!recheck.data?.isCompleted) {
+                    setSaveError({
+                        open: true,
+                        title: "상태 업데이트 실패",
+                        description: "해결 완료 상태로 변경되지 않았어요. 다시 시도해주세요.",
+                    });
+                    return;
+                }
+            }
+            onSaved?.(submission.id);
+            setDirty(false);
+            setSaved(true);
+        } catch {
+            setSaveError({
+                open: true,
+                title: "저장 실패",
+                description: "피드백 저장 또는 상태 변경에 실패했어요. 잠시 후 다시 시도해주세요.",
+            });
+        } finally {
+            setSaving(false);
+        }
     };
 
     // 코멘트 리스트(우측/시트 공용)
@@ -473,9 +587,9 @@ if (pinEl) {
                             </button>
 
                             <div className="flex min-w-0 flex-1 gap-3 overflow-x-auto pb-2">
-                                {submission.images.map((src, i) => (
+                                {submission.files.map((file, i) => (
                                     <button
-                                        key={src + i}
+                                        key={`${file.fileId}-${i}`}
                                         type="button"
                                         onClick={() => {
                                             setActiveImageIdx(i);
@@ -489,7 +603,7 @@ if (pinEl) {
                                             i === activeImageIdx ? "border-violet-500" : "border-gray-200 hover:border-gray-300"
                                         )}
                                     >
-                                        <img src={src} alt="" className="h-16 w-24 object-cover" />
+                                        <img src={file.url} alt="" className="h-16 w-24 object-cover" />
                                     </button>
                                 ))}
                             </div>
@@ -497,7 +611,7 @@ if (pinEl) {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setActiveImageIdx((v) => Math.min(submission.images.length - 1, v + 1));
+                                    setActiveImageIdx((v) => Math.min(submission.files.length - 1, v + 1));
                                     setSelectedNumber(null);
                                     setEditingNumber(null);
                                     setEditingText("");
@@ -706,6 +820,16 @@ if (pinEl) {
                 confirmText="확인"
                 onCancel={() => setSaved(false)}
                 onConfirm={() => setSaved(false)}
+            />
+            <ConfirmModal
+                open={saveError.open}
+                variant="error"
+                title={saveError.title}
+                description={saveError.description}
+                cancelText="닫기"
+                confirmText="확인"
+                onCancel={() => setSaveError((prev) => ({ ...prev, open: false }))}
+                onConfirm={() => setSaveError((prev) => ({ ...prev, open: false }))}
             />
         </>
     );

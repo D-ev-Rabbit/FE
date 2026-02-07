@@ -13,7 +13,7 @@ import type { MentorTodo } from "@/types/mentorTodo";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import { mentorPlannerApi } from "@/api/mentor/planner";
-import { fileApi } from "@/api/file";
+import { fileApi, type MentorTodoFile } from "@/api/file";
 
 export default function MentorTodoPage(){
   const [mentees, setMentees] = useState<MentorMentee[]>([]);
@@ -28,6 +28,7 @@ export default function MentorTodoPage(){
   const [commentText, setCommentText] = useState("");
   const [isSavingComment, setIsSavingComment] = useState(false);
   const [commentSuccessOpen, setCommentSuccessOpen] = useState(false);
+  const [uploadSuccessOpen, setUploadSuccessOpen] = useState(false);
   const [errorModal, setErrorModal] = useState<{
     open: boolean;
     title: string;
@@ -163,6 +164,7 @@ export default function MentorTodoPage(){
   const [editOpen, setEditOpen] = useState(false)
   const [editMode, setEditMode] = useState<"create" | "edit">("create")
   const [editingTodo, setEditingTodo] = useState<TodoItem | null>(null)
+  const [editingFiles, setEditingFiles] = useState<MentorTodoFile[]>([])
 
   // 할일 추가
   const openCreate = () => {
@@ -170,6 +172,27 @@ export default function MentorTodoPage(){
     setEditingTodo(null)
     setEditOpen(true)
   }
+
+  useEffect(() => {
+    if (!editOpen || editMode !== "edit" || !editingTodo) {
+      setEditingFiles([]);
+      return;
+    }
+    let ignore = false;
+    fileApi
+      .getMentorTodoFiles(editingTodo.id)
+      .then((res) => {
+        if (ignore) return;
+        setEditingFiles(res.data ?? []);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setEditingFiles([]);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [editOpen, editMode, editingTodo]);
   //저장 로직
   const saveTodo = ({
     title,
@@ -195,6 +218,7 @@ export default function MentorTodoPage(){
           if (file) {
             try {
               await fileApi.uploadFile(res.data.id, file);
+              setUploadSuccessOpen(true);
             } catch (err) {
               setErrorModal({
                 open: true,
@@ -221,7 +245,19 @@ export default function MentorTodoPage(){
         goal: "",
         isCompleted: editingTodo.done,
       })
-        .then(() => {
+        .then(async () => {
+          if (file) {
+            try {
+              await fileApi.uploadFile(editingTodo.id, file);
+              setUploadSuccessOpen(true);
+            } catch (err) {
+              setErrorModal({
+                open: true,
+                title: "파일 업로드 실패",
+                description: getErrorMessage(err, "과제 파일 업로드에 실패했어요. 잠시 후 다시 시도해주세요."),
+              });
+            }
+          }
           refreshTodos();
           setEditOpen(false);
         })
@@ -456,6 +492,7 @@ export default function MentorTodoPage(){
                 open={editOpen}
                 mode={editMode}
                 initial={editingTodo}
+                files={editingFiles}
                 onClose={() => setEditOpen(false)}
                 onSave={saveTodo}
                 onDelete={editMode === "edit" ? deleteTodo : undefined}
@@ -488,6 +525,16 @@ export default function MentorTodoPage(){
         description="멘토 플래너 피드백이 저장되었습니다."
         onCancel={() => setCommentSuccessOpen(false)}
         onConfirm={() => setCommentSuccessOpen(false)}
+        showCancel={false}
+        confirmText="확인"
+      />
+      <ConfirmModal
+        open={uploadSuccessOpen}
+        variant="success"
+        title="파일 업로드 완료"
+        description="과제 파일이 정상적으로 업로드되었습니다."
+        onCancel={() => setUploadSuccessOpen(false)}
+        onConfirm={() => setUploadSuccessOpen(false)}
         showCancel={false}
         confirmText="확인"
       />

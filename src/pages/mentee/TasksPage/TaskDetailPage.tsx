@@ -37,7 +37,9 @@ export default function MenteeTaskDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [uploads, setUploads] = useState<Array<{ id: number; url: string }>>([]);
   const [pendingUploads, setPendingUploads] = useState<Array<{ id: string; url: string; file: File }>>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [feedbackPinsByImage, setFeedbackPinsByImage] = useState<Record<number, { id: number; x: number; y: number; text: string }[]>>({});
+  const [feedbackOverall, setFeedbackOverall] = useState("");
+  const [isUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
@@ -89,6 +91,53 @@ export default function MenteeTaskDetailPage() {
     }
   }, [task, activeImageIndex]);
 
+  useEffect(() => {
+    if (!task?.files || task.files.length === 0) {
+      setFeedbackPinsByImage({});
+      setFeedbackOverall("");
+      return;
+    }
+    let latestId = -1;
+    let overall = "";
+    const nextPins: Record<number, { id: number; x: number; y: number; text: string }[]> = {};
+
+    task.files.forEach((file, fileIndex) => {
+      const feedbacks = (file.feedbacks ?? []) as Array<{ data?: string; feedbackId?: number }>;
+      if (!feedbacks.length) return;
+      const sorted = [...feedbacks].sort((a, b) => (a.feedbackId ?? 0) - (b.feedbackId ?? 0));
+      for (let i = sorted.length - 1; i >= 0; i -= 1) {
+        const data = sorted[i]?.data;
+        if (!data) continue;
+        try {
+          const parsed = JSON.parse(data);
+          const pinsFromData =
+            parsed.pinsByImage?.find((p: any) => p.imageIndex === fileIndex)?.pins ??
+            parsed.pinsByImage?.[0]?.pins ??
+            [];
+          if (pinsFromData?.length) {
+            nextPins[fileIndex] = pinsFromData.map((p: any) => ({
+              id: p.number,
+              x: p.x,
+              y: p.y,
+              text: p.text ?? "",
+            }));
+          }
+          const id = sorted[i]?.feedbackId ?? 0;
+          if (parsed.overallComment && id >= latestId) {
+            latestId = id;
+            overall = parsed.overallComment;
+          }
+          break;
+        } catch {
+          continue;
+        }
+      }
+    });
+
+    setFeedbackPinsByImage(nextPins);
+    setFeedbackOverall(overall);
+  }, [task?.files]);
+
   if (isLoadingTask) {
     return (
       <div className="space-y-4 pb-6">
@@ -126,6 +175,19 @@ export default function MenteeTaskDetailPage() {
   }
 
   const status = statusConfig[task.isCompleted ? "done" : "pending"];
+  const toApiSubject = (value?: string) => {
+    if (!value) return "";
+    if (value === "국어") return "KOREAN";
+    if (value === "영어") return "ENGLISH";
+    if (value === "수학") return "MATH";
+    return value;
+  };
+  const displaySubject = (() => {
+    if (task.subject === "KOREAN") return "국어";
+    if (task.subject === "ENGLISH") return "영어";
+    if (task.subject === "MATH") return "수학";
+    return task.subject;
+  })();
   const handleUpload = () => {
     if (!selectedFile) return;
     const tempUrl = URL.createObjectURL(selectedFile);
@@ -138,18 +200,6 @@ export default function MenteeTaskDetailPage() {
   };
 
 
-  const handleDeleteUpload = (id: number) => {
-    setUploads((prev) => {
-      const target = prev.find((item) => item.id === id);
-      if (target) URL.revokeObjectURL(target.url);
-      const next = prev.filter((item) => item.id !== id);
-      if (activeImageIndex >= next.length) {
-        setActiveImageIndex(Math.max(0, next.length - 1));
-      }
-      if (next.length === 0) setDetailOpen(false);
-      return next;
-    });
-  };
 
   const handleDeletePending = (id: string) => {
     setPendingUploads((prev) => {
@@ -179,7 +229,7 @@ export default function MenteeTaskDetailPage() {
       await patchMenteeTodo(task.id, {
         title: task.title,
         date: task.date,
-        subject: task.subject,
+        subject: toApiSubject(task.subject),
         goal: task.goal ?? "",
         isCompleted: true,
       });
@@ -208,10 +258,8 @@ export default function MenteeTaskDetailPage() {
       setIsSavingTask(false);
     }
   };
-  const feedbackPins = [
-    { id: 1, left: "70%", top: "20%", text: "문단 첫 문장에 주어-서술어 호응 체크" },
-    { id: 2, left: "30%", top: "55%", text: "예시를 하나 더 추가하면 설득력이 좋아져요" },
-  ];
+  const activeIsPending = activeImageIndex >= uploads.length;
+  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeImageIndex] ?? [];
 
   return (
     <>
@@ -245,7 +293,7 @@ export default function MenteeTaskDetailPage() {
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
-              {task.subject}
+              {displaySubject}
             </span>
             <div className="text-lg font-bold text-gray-900">{task.title}</div>
           </div>
@@ -318,7 +366,7 @@ export default function MenteeTaskDetailPage() {
         </section>
 
         <section className="rounded-3xl border border-gray-200 bg-white p-5 text-center text-sm text-gray-500 shadow-sm">
-          <div className="mb-3 text-left text-sm font-semibold text-gray-700">멘토 피드백</div>
+          <div className="mb-3 text-left text-sm font-semibold text-gray-700">전반적인 피드백</div>
           이곳에 멘토 피드백이 기록됩니다.
         </section>
 
@@ -470,7 +518,7 @@ export default function MenteeTaskDetailPage() {
                       key={`detail-pin-${pin.id}`}
                       type="button"
                       onClick={() => setActivePinId((prev) => (prev === pin.id ? null : pin.id))}
-                      style={{ left: pin.left, top: pin.top }}
+                      style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
                       aria-label={`피드백 코멘트 ${pin.id}`}
                       className={cn(
                         "btn-none",
@@ -509,7 +557,9 @@ export default function MenteeTaskDetailPage() {
             <div className="mb-2 text-xs font-extrabold text-gray-800">멘토 피드백</div>
             {activePinId
               ? feedbackPins.find((pin) => pin.id === activePinId)?.text
-              : "사진의 번호를 눌러 코멘트를 확인하세요."}
+              : feedbackOverall
+                ? feedbackOverall
+                : "사진의 번호를 눌러 코멘트를 확인하세요."}
           </div>
         </div>
       </ModalBase>

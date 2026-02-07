@@ -25,7 +25,7 @@ export default function MentorLayout() {
   }, []);
 
   return (
-    <div className="min-h-dvh w-full bg-gray-50 lg:h-dvh">
+    <div className="min-h-dvh h-dvh w-full bg-gray-50">
       {/* dim */}
       <div
         className={cn(
@@ -40,6 +40,7 @@ export default function MentorLayout() {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-[280px] bg-gray-50 p-2",
+          "flex flex-col overflow-y-auto",
           "transition-transform duration-200 ease-out lg:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -60,15 +61,15 @@ export default function MentorLayout() {
       </aside>
 
       {/* layout */}
-      <div className="grid lg:grid-cols-[280px_1fr] lg:h-full">
+      <div className="grid h-full lg:grid-cols-[280px_1fr]">
         {/* Sidebar: PC에서만 보임 */}
         <aside className="hidden h-full overflow-hidden p-6 lg:block">
           <MentorSidebarPc />
         </aside>
 
         {/* Right */}
-        <div className="min-w-0 lg:h-full">
-          <div className="grid lg:h-full lg:grid-rows-[auto_1fr]">
+        <div className="min-w-0 h-full">
+          <div className="grid h-full grid-rows-[auto_1fr]">
             {/* Header */}
             <header className="shrink-0 p-6 pb-0">
               <div className="flex items-center justify-between">
@@ -83,8 +84,8 @@ export default function MentorLayout() {
               </div>
             </header>
 
-            <main className="lg:min-h-0 lg:overflow-y-auto lg:h-full">
-              <div className="rounded-3xl bg-white p-6 sm:p-8 mr-3">
+            <main className="min-h-0 overflow-y-auto h-full">
+              <div className="w-full rounded-3xl bg-white p-6 sm:p-8 mr-0 lg:mr-3">
                 <Outlet />
               </div>
 
