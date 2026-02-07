@@ -35,11 +35,6 @@ export default function MentorTasksPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoadingTodos, setIsLoadingTodos] = useState(false);
 
-  const _selectedStudent = useMemo(() => {
-    if (!selectedMenteeId) return null;
-    return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
-  }, [selectedMenteeId, mentees]);
-
   const handleSelect = (row: MenteeRowData) => {
     setSelectedMenteeId(row.id);
   };
