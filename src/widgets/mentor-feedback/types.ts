@@ -17,6 +17,12 @@ export type Submission = {
   submittedAt: string; // "25/12/2023" 같은 문자열
   subject: Subject;
   title?: string;
+  goal?: string;
   isCompleted?: boolean;
-  images: string[]; // url or local
+  menteeId?: number;
+  files: {
+    fileId: number;
+    url: string;
+    feedbacks?: { data?: string; feedbackId?: number }[];
+  }[]; // url or local
 };
