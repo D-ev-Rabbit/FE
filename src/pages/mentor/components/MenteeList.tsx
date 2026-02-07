@@ -11,7 +11,7 @@ export default function MenteeList({ rows, selectedId, onSelect }: Props) {
   return (
     <div className="space-y-3">
       
-      <div className="grid grid-cols-[170px_1fr_170px] px-2 text-xs text-gray-400">
+      <div className="hidden grid-cols-[170px_1fr_170px] px-2 text-xs text-gray-400 sm:grid">
         <div className="text-center">이름</div>
         <div className="text-center">학교</div>
         <div className="text-center">학년</div>
