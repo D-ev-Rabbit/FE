@@ -204,14 +204,6 @@ export default function ActivitySummaryContent() {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-sm text-gray-500">
-        로딩 중...
-      </div>
-    );
-  }
-
   const formatStudyTimeCaps = (seconds: number) => {
     const totalMinutes = Math.max(0, Math.round(seconds / 60));
     const hours = Math.floor(totalMinutes / 60);
@@ -235,16 +227,23 @@ export default function ActivitySummaryContent() {
   };
   const subjectEntries = useMemo(() => {
     const subjects = summary?.subjects ?? {};
-    const entries = Object.entries(subjects);
+    const normalized = Object.entries(subjects).reduce<Record<string, MenteeSummarySubject>>(
+      (acc, [key, value]) => {
+        const name = subjectLabel(key);
+        if (!acc[name]) acc[name] = value as MenteeSummarySubject;
+        return acc;
+      },
+      {}
+    );
+
+    const entries = Object.entries(normalized);
     if (entries.length === 0) {
       return subjectOrder.map((name) => [name, null] as const);
     }
     const ordered = subjectOrder
-      .filter((name) => subjects[name])
-      .map((name) => [name, subjects[name]] as const);
-    const rest = entries
-      .filter(([name]) => !subjectOrder.includes(name))
-      .map(([name, value]) => [subjectLabel(name), value] as const);
+      .filter((name) => normalized[name])
+      .map((name) => [name, normalized[name]] as const);
+    const rest = entries.filter(([name]) => !subjectOrder.includes(name));
     return [...ordered, ...rest];
   }, [summary]);
 
@@ -317,6 +316,14 @@ export default function ActivitySummaryContent() {
   }, []);
 
   const SWIPE_THRESHOLD = Math.max(60, viewportW * 0.2);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-sm text-gray-500">
+        로딩 중...
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full">
