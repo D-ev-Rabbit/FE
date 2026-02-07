@@ -1,25 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { HiOutlineUsers } from "react-icons/hi2";
 import { MdChecklist, MdOutlineFeedback } from "react-icons/md";
-import { RiTodoLine } from "react-icons/ri";
 
-type Props = {
-  mentees: { id: string; grade: string; name: string }[];
-  selectedId: string;
-  onSelectMentee: (id: string) => void;
-
-  selectedStudent: { id: string; grade: string; name: string } | null;
-  selectedStatus: {
-    todo: [number, number];
-    submit: [number, number];
-    feedbackDone: [number, number];
-  } | null;
-
-  filteredFeedbackTasks: any[];
-};
-
-export default function MentorHomeLayout({
-}: Props) {
+export default function MentorHomePage() {
   const navigate = useNavigate();
   const quickMenus = [
     {

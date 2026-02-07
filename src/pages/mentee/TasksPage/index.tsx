@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DateNavigator from "./components/DateNavigator";
 import SubjectSection from "./components/SubjectSection";
-import type { FeedbackSummary, SubjectSection as SubjectSectionType } from "./types/tasks";
+import type { SubjectSection as SubjectSectionType } from "./types/tasks";
 import { addDays, formatKoreanDate, toDateKey } from "./utils/date";
 import { getMenteeTodos } from "@/api/mentee/todo";
 import type { MenteeTodo } from "@/types/planner";
@@ -19,7 +19,6 @@ export default function MenteeTasksPage() {
   const baseDate = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(() => baseDate);
   const [todos, setTodos] = useState<MenteeTodo[]>([]);
-  const feedbacks: FeedbackSummary[] = [];
 
   const dateKey = toDateKey(selectedDate);
 

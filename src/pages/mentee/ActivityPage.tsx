@@ -204,6 +204,14 @@ export default function ActivitySummaryContent() {
     };
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-sm text-gray-500">
+        로딩 중...
+      </div>
+    );
+  }
+
   const formatStudyTimeCaps = (seconds: number) => {
     const totalMinutes = Math.max(0, Math.round(seconds / 60));
     const hours = Math.floor(totalMinutes / 60);

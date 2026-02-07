@@ -35,7 +35,7 @@ export default function MentorTasksPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoadingTodos, setIsLoadingTodos] = useState(false);
 
-  const selectedStudent = useMemo(() => {
+  const _selectedStudent = useMemo(() => {
     if (!selectedMenteeId) return null;
     return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
   }, [selectedMenteeId, mentees]);
@@ -65,11 +65,12 @@ export default function MentorTasksPage() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  
+
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setCalendarOpen(false);
   };
+
   // 과제 필터
   const selectedDateStr = `${selectedDate.getFullYear()}-${String( //날짜 format 변환 
     selectedDate.getMonth() + 1
@@ -198,10 +199,7 @@ export default function MentorTasksPage() {
                     <div className="relative">
                       <CalendarPopover
                         selected={selectedDate}
-                        onSelect={(date) => {
-                          setSelectedDate(date);
-                          setCalendarOpen(false);
-                        }}
+                        onSelect={handleDateSelect}
                         onClose={() => setCalendarOpen(false)}
                       />
                     </div>

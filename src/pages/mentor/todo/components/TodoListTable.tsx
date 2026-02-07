@@ -25,7 +25,7 @@ const subjectBadgeClass = (s: TodoItem["subject"]) => {
   return "bg-indigo-100 text-indigo-800 ring-indigo-200";
 };
 
-export default function TodoListTable({ items, onToggleDone, onClickRow, className }: Props) {
+export default function TodoListTable({ items, onToggleDone: _onToggleDone, onClickRow, className }: Props) {
   return (
     <div className={clsx("rounded-2xl border border-gray-200 bg-white", className)}>
       <div className="max-h-[420px] overflow-y-auto">

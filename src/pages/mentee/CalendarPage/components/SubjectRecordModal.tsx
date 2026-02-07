@@ -1,5 +1,4 @@
 import ModalBase from "@/shared/ui/modal/ModalBase";
-import { HiOutlineChevronDown } from "react-icons/hi2";
 
 type SubjectRecordModalProps = {
   open: boolean;

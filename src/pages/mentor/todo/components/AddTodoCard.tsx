@@ -1,4 +1,4 @@
-import { FiPlus, FiFileText } from "react-icons/fi"
+import { FiPlus } from "react-icons/fi"
 import { FaPen } from "react-icons/fa";
 
 
@@ -7,7 +7,7 @@ type Props = {
   onOpenTemplate?: () => void
 }
 
-export default function AddTodoCard({ onAdd, onOpenTemplate }: Props) {
+export default function AddTodoCard({ onAdd, onOpenTemplate: _onOpenTemplate }: Props) {
   return (
     <div className="w-full rounded-2xl border border-gray-200 bg-white px-5 py-4">
       <div className="flex items-center justify-between gap-4">
