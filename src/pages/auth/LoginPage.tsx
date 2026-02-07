@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { login } from "@/api/auth"; 
+import axios from "axios";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -33,7 +34,12 @@ export default function LoginPage() {
       if (finalRole === "MENTOR") navigate("/mentor/home");
       else navigate("/mentee/calendar");
     } catch (e: any) {
-      setError(e?.message ?? "로그인에 실패했습니다.");
+      if (axios.isAxiosError(e)) {
+        const serverMessage = e.response?.data?.message;
+        setError(serverMessage ?? "로그인에 실패했습니다.");
+      } else {
+        setError(e?.message ?? "로그인에 실패했습니다.");
+      }
     } finally {
       setLoading(false);
     }
