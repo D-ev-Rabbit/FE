@@ -34,6 +34,8 @@ function toNotice(item: NotificationResponse): Notice {
     type: item.type,
     title,
     timeLabel: formatRelativeTime(item.createdAt),
+    todoId: item.todoId ?? null,
+    plannerDate: item.plannerDate ?? null,
   };
 }
 
@@ -166,11 +168,19 @@ export default function MobileHeader({
                     });
                 }
 
-                // 예시 라우팅: 카테고리별 상세로 보내기
-                if (notice.type === "TODO_COMMENT") navigate("/mentee/tasks");
-                if (notice.type === "FILE_FEEDBACK") navigate("/mentee/tasks");
-                if (notice.type === "PLANNER_COMMENT") navigate("/mentee/calendar");
-                if (notice.type === "TODO_INCOMPLETE") navigate("/mentee/tasks");
+                // 카테고리별 상세로 보내기
+                if (notice.type === "FILE_FEEDBACK") {
+                  if (notice.todoId) navigate(`/mentee/tasks/${notice.todoId}`);
+                  else navigate("/mentee/tasks");
+                  return;
+                }
+                if (notice.type === "TODO_COMMENT" || notice.type === "TODO_INCOMPLETE") {
+                  navigate("/mentee/calendar");
+                  return;
+                }
+                if (notice.type === "PLANNER_COMMENT") {
+                  navigate("/mentee/calendar");
+                }
               }}
             />
 

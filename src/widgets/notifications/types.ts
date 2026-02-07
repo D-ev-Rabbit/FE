@@ -5,4 +5,6 @@ export type Notice = {
   type: NotificationType;
   title: string;
   timeLabel: string;
+  todoId?: number | null;
+  plannerDate?: string | null;
 };
