@@ -538,7 +538,7 @@ export default function MenteeCalendarPage() {
           onOpenGoalActions={openGoalActions}
           onAddTask={openAddTask}
           onToggleSubject={toggleSubject}
-          onToggleTaskDone={toggleTaskDone}
+          onToggleTaskDone={handleToggleTodoDone}
           onOpenTaskActions={openTaskActions}
           getTasksForDate={getTasksForDate}
           onOpenTaskDetail={openTaskDetail}

@@ -211,7 +211,9 @@ export default function DailyView({
                       할 일이 없습니다.
                     </div>
                   ) : (
-                    subject.tasks.map((task) => (
+                    [...subject.tasks]
+                      .sort((a, b) => Number(a.done ?? false) - Number(b.done ?? false))
+                      .map((task) => (
                       <div
                         key={task.id}
                         className="flex items-center justify-between gap-2 text-sm"

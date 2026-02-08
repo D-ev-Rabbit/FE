@@ -5,6 +5,8 @@ import type { SubjectSection as SubjectSectionType } from "./types/tasks";
 import { addDays, formatKoreanDate, toDateKey } from "./utils/date";
 import { getMenteeTodos } from "@/api/mentee/todo";
 import type { MenteeTodo } from "@/types/planner";
+import DatePickerModal from "@/pages/mentee/CalendarPage/components/DatePickerModal";
+import { buildMonthGrid, formatMonthLabel } from "@/pages/mentee/CalendarPage/utils/date";
 
 const DEFAULT_SUBJECTS = ["국어", "영어", "수학"] as const;
 const normalizeSubject = (value?: string) => {
@@ -18,6 +20,8 @@ const normalizeSubject = (value?: string) => {
 export default function MenteeTasksPage() {
   const baseDate = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(() => baseDate);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
   const [todos, setTodos] = useState<MenteeTodo[]>([]);
 
   const dateKey = toDateKey(selectedDate);
@@ -69,18 +73,42 @@ export default function MenteeTasksPage() {
     return ordered;
   }, [todos]);
 
+  const pickerLabel = useMemo(() => formatMonthLabel(pickerMonth), [pickerMonth]);
+  const pickerGrid = useMemo(() => buildMonthGrid(pickerMonth), [pickerMonth]);
+
   return (
     <div className="space-y-5 pb-6">
       <DateNavigator
         label={formatKoreanDate(selectedDate)}
         onPrev={() => setSelectedDate((prev) => addDays(prev, -1))}
         onNext={() => setSelectedDate((prev) => addDays(prev, 1))}
+        onOpen={() => {
+          setPickerMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+          setDatePickerOpen(true);
+        }}
       />
       <div className="space-y-6">
         {sections.map((section) => (
           <SubjectSection key={section.id} section={section} />
         ))}
       </div>
+      <DatePickerModal
+        open={datePickerOpen}
+        monthLabel={pickerLabel}
+        monthGrid={pickerGrid}
+        currentDate={selectedDate}
+        onPrevMonth={() =>
+          setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+        }
+        onNextMonth={() =>
+          setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+        }
+        onSelectDate={(date) => {
+          setSelectedDate(date);
+          setDatePickerOpen(false);
+        }}
+        onClose={() => setDatePickerOpen(false)}
+      />
     </div>
   );
 }
