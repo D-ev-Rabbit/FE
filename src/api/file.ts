@@ -3,28 +3,47 @@ import { uploadAxios } from "@/api/uploadAxios";
 export type FileUploadResponse = {
   id: number;
   todoId: number;
-  url: string;
-  type: "PDF" | "IMG" | "ETC";
+  url: string; // 다운로드 API 경로: /api/files/{id}/download
+  name?: string;
+  type: "PDF" | "JPG" | "PNG";
   creatorId: number;
 };
 
 export type MentorTodoFile = {
   id: number;
   todoId: number;
-  url: string;
-  type: "PDF" | "IMG" | "ETC" | string;
+  url: string; // 다운로드 API 경로: /api/files/{id}/download
+  name?: string;
+  type: "PDF" | "JPG" | "PNG" | string;
   creatorId: number;
 };
+
+/** 다운로드/미리보기용 URL 반환 (baseURL 미설정 시 상대 경로 그대로) */
+export function getFileDownloadUrl(fileId: number): string {
+  const base = uploadAxios.defaults.baseURL ?? "";
+  const path = `/api/files/${fileId}/download`;
+  return base ? `${base.replace(/\/$/, "")}${path}` : path;
+}
 
 export const fileApi = {
   uploadFile: (todoId: number, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-
     return uploadAxios.post<FileUploadResponse>(`/api/files/upload/${todoId}`, formData);
   },
   getMentorTodoFiles: (todoId: number) => {
     return uploadAxios.get<MentorTodoFile[]>(`/api/files/todos/${todoId}/mentor`);
+  },
+  /** Bearer 토큰으로 파일 바디 fetch (이미지 미리보기 등) */
+  fetchFileBlob: (url: string) => {
+    const token = localStorage.getItem("accessToken");
+    const fullUrl = url.startsWith("http") ? url : (uploadAxios.defaults.baseURL ?? "") + url;
+    return fetch(fullUrl, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then((res) => {
+      if (!res.ok) throw new Error("File fetch failed");
+      return res.blob();
+    });
   },
   postMentorFeedback: (fileId: number, body: { data: string }) => {
     return uploadAxios.post<{ id: number; data: string }>(`/api/mentor/files/${fileId}/feedback`, body);

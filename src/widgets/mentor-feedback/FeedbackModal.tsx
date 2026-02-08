@@ -55,6 +55,9 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
     // 모바일 COMMENT 바텀시트
     const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
+    // 다운로드 API URL → Blob URL (Bearer 인증으로 이미지 로드)
+    const [blobUrlsByUrl, setBlobUrlsByUrl] = useState<Record<string, string>>({});
+
     // 이동 모드에서는 바텀시트 닫기
     useEffect(() => {
         if (mode === "pan") {
@@ -63,10 +66,35 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
     }, [mode]);
     const wrapRef = useRef<HTMLDivElement | null>(null);
 
+    // submission 파일 URL들을 Bearer로 fetch → blob URL 캐시
+    useEffect(() => {
+        if (!open || !submission?.files?.length) return;
+        const urls = submission.files.map((f) => f.url).filter(Boolean);
+        let revoked = false;
+        urls.forEach((url) => {
+            fileApi
+                .fetchFileBlob(url)
+                .then((blob) => {
+                    if (revoked) return;
+                    const blobUrl = URL.createObjectURL(blob);
+                    setBlobUrlsByUrl((prev) => ({ ...prev, [url]: blobUrl }));
+                })
+                .catch(() => {});
+        });
+        return () => {
+            revoked = true;
+            setBlobUrlsByUrl((prev) => {
+                Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+                return {};
+            });
+        };
+    }, [open, submission?.files]);
+
     const imgSrc = useMemo(() => {
         if (!submission) return "";
-        return submission.files[activeImageIdx]?.url ?? "";
-    }, [submission, activeImageIdx]);
+        const raw = submission.files[activeImageIdx]?.url ?? "";
+        return (raw && blobUrlsByUrl[raw]) || raw;
+    }, [submission, activeImageIdx, blobUrlsByUrl]);
 
     // 현재 이미지의 핀들
     const pins: Pin[] = useMemo(() => {
@@ -603,7 +631,7 @@ if (pinEl) {
                                             i === activeImageIdx ? "border-violet-500" : "border-gray-200 hover:border-gray-300"
                                         )}
                                     >
-                                        <img src={file.url} alt="" className="h-16 w-24 object-cover" />
+                                        <img src={blobUrlsByUrl[file.url] || file.url} alt="" className="h-16 w-24 object-cover" />
                                     </button>
                                 ))}
                             </div>
