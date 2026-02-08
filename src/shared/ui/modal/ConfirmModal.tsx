@@ -81,7 +81,7 @@ export default function ConfirmModal({
 
   return (
     <ModalBase open={open} onClose={onCancel}>
-      <div className="w-full max-w-2xl rounded-3xl bg-white px-10 py-8 shadow-xl">
+      <div className="mx-auto w-[92vw] max-w-[360px] rounded-3xl bg-white px-8 py-7 shadow-xl sm:w-full sm:max-w-2xl sm:px-10 sm:py-8">
         <div className="flex flex-col items-center text-center">
           <div className={`flex h-14 w-14 items-center justify-center rounded-full ${s.iconWrap}`}>
             {s.icon("h-7 w-7")}
