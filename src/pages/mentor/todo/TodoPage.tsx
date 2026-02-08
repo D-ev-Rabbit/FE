@@ -1,6 +1,5 @@
 import MenteeCard from "@/shared/ui/card/MenteeCard";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee } from "@/types/mentor";
 import TodoListTable, { type TodoItem } from "./components/TodoListTable"
 import SubjectFilter, {type Subject} from "../components/subjectFilter";
@@ -8,10 +7,11 @@ import AddTodoCard from "./components/AddTodoCard";
 import TodoEditModal from "./components/TodoEditModal";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { buildMonthGrid, formatMonthLabel, dayLabels } from "@/pages/mentee/CalendarPage/utils/date";
-import { mentorTodoApi } from "@/api/mentor/todo";
 import type { MentorTodo } from "@/types/mentorTodo";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 import ModalBase from "@/shared/ui/modal/ModalBase";
+import { mentorMenteeApi } from "@/api/mentor/mentees";
+import { mentorTodoApi } from "@/api/mentor/todo";
 import { mentorPlannerApi } from "@/api/mentor/planner";
 import { fileApi, type MentorTodoFile } from "@/api/file";
 
@@ -29,6 +29,11 @@ export default function MentorTodoPage(){
   const [isSavingComment, setIsSavingComment] = useState(false);
   const [commentSuccessOpen, setCommentSuccessOpen] = useState(false);
   const [uploadSuccessOpen, setUploadSuccessOpen] = useState(false);
+  
+  const [isLoadingComment, setIsLoadingComment] = useState(false);
+  const [plannerComment, setPlannerComment] = useState<string | null>(null);
+  const hasPlannerComment = !!plannerComment?.trim();
+
   const [errorModal, setErrorModal] = useState<{
     open: boolean;
     title: string;
@@ -289,7 +294,7 @@ export default function MentorTodoPage(){
   }
 
   const openPlannerComment = () => {
-    setCommentText("");
+    setCommentText(plannerComment ?? "");
     setCommentOpen(true);
   };
 
@@ -302,6 +307,8 @@ export default function MentorTodoPage(){
         selectedDateStr,
         { comment: commentText.trim() }
       );
+      setPlannerComment(commentText.trim());
+
       setCommentOpen(false);
       setCommentSuccessOpen(true);
     } catch (err) {
@@ -314,6 +321,45 @@ export default function MentorTodoPage(){
       setIsSavingComment(false);
     }
   };
+
+  //날짜별 플래너 피드백 코멘트 상태 갱신
+  useEffect(() => {
+    if (!selectedMenteeId) return;
+
+    let cancelled = false;
+
+    const fetchPlannerComment = async () => {
+      setIsLoadingComment(true);
+      try {
+        const res = await mentorPlannerApi.getPlannerComment(
+          Number(selectedMenteeId),
+          selectedDateStr
+        );
+
+        console.log("[getPlannerComment] status:", res.status);
+        console.log("[getPlannerComment] data:", res.data);
+
+        const comment = res.data?.comment;
+        setPlannerComment(comment?.trim() ? comment : null);
+      } catch (err: any) {
+        console.log("[getPlannerComment] FAILED", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message,
+        });
+        setPlannerComment(null);
+      } finally {
+        setIsLoadingComment(false);
+      }
+    };
+
+    fetchPlannerComment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMenteeId, selectedDateStr]);
+
 
   return (
     <div className="space-y-6">
@@ -417,9 +463,9 @@ export default function MentorTodoPage(){
                         onClick={() => setSelectedDate(cell.date)}
                         className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full transition ${
                           isSelected
-                            ? "bg-violet-100 text-violet-700"
+                            ? "bg-violet-600 text-white"
                             : cell.isToday
-                              ? "bg-violet-600 text-white shadow"
+                              ? "bg-violet-100 text-violet-700 shadow"
                               : isSunday
                                 ? "text-red-500"
                                 : "text-gray-900"
@@ -439,15 +485,18 @@ export default function MentorTodoPage(){
 
           {/* TodoList Table */}
           <section className="w-full min-w-0 flex-1">
-            {/* 과목필터 */}
+            {/* 과목필터 & 플래너 피드백 */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3">
               <SubjectFilter value={subject} onChange={setSubject}/>
               <button
                 type="button"
                 onClick={openPlannerComment}
-                className="rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100"
+                disabled={!selectedMenteeId || isLoadingComment}
+                className="rounded-xl bg-violet-600 px-4 py-2 text-white disabled:opacity-50"
               >
-                오늘의 플래너 피드백하기
+                {hasPlannerComment ? "피드백 수정하기" : "플래너 피드백하기"}
+              
+                
               </button>
             </div>
             <div className="w-full max-w-[900px] bg-white p-4">

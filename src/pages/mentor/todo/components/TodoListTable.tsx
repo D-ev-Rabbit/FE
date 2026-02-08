@@ -30,7 +30,7 @@ export default function TodoListTable({ items, onToggleDone: _onToggleDone, onCl
     <div className={clsx("rounded-2xl border border-gray-200 bg-white", className)}>
       <div className="max-h-[420px] overflow-y-auto">
         {items.length === 0 ? (
-          <div className="px-5 pb-5 text-sm text-gray-500">해당 날짜/과목의 과제가 없어요.</div>
+          <div className="px-5 p-5 text-sm text-gray-500">해당 날짜/과목의 과제가 없어요.</div>
         ) : (
           <ul className="divide-y divide-gray-100">
             {items.map((t) => (
