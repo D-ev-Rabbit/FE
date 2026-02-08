@@ -54,12 +54,12 @@ export default function DailyView({
   onOpenTaskDetail,
 }: DailyViewProps) {
   const formatStudyTimeCaps = (minutes: number) => {
-    if (minutes <= 0) return "0M";
+    if (minutes <= 0) return "0분";
     const hours = Math.floor(minutes / 60);
     const remain = minutes % 60;
-    if (hours === 0) return `${remain}M`;
-    if (remain === 0) return `${hours}H`;
-    return `${hours}H ${remain}M`;
+    if (hours === 0) return `${remain}분`;
+    if (remain === 0) return `${hours}시간`;
+    return `${hours}시간 ${remain}분`;
   };
 
   const studyTimes = subjects.map((subject) => {
@@ -129,14 +129,17 @@ export default function DailyView({
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
-          <div className="text-sm font-semibold text-gray-900">
-            총 공부 시간 {formatStudyTimeCaps(totalStudyMinutes)}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <span>총 공부 시간</span>
+            <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+              {formatStudyTimeCaps(totalStudyMinutes)}
+            </span>
           </div>
           <button
             type="button"
             onClick={onOpenRecord}
-            className="inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-700"
+            className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-700"
           >
             기록하기
           </button>

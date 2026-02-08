@@ -14,6 +14,7 @@ type DailyRecordPageProps = {
   readOnly: boolean;
   onBack: () => void;
   onOpenDatePicker: () => void;
+  onRefreshSessions?: () => void;
 };
 
 const SUBJECT_COLORS = [
@@ -49,15 +50,13 @@ const SUBJECT_COLOR_BY_NAME: Record<string, (typeof SUBJECT_COLORS)[number]> = {
   수학: SUBJECT_COLORS[2],
 };
 
-const formatTimeHHMMSS = (minutes: number, seconds = 0) => {
+const formatTimeHM = (minutes: number) => {
   const total = Math.max(0, minutes);
   const hours = Math.floor(total / 60);
   const remain = total % 60;
-  const safeSeconds = Math.max(0, Math.min(59, seconds));
-  return `${String(hours).padStart(2, "0")}:${String(remain).padStart(
-    2,
-    "0"
-  )}:${String(safeSeconds).padStart(2, "0")}`;
+  if (hours === 0) return `${remain}분`;
+  if (remain === 0) return `${hours}시간`;
+  return `${hours}시간 ${remain}분`;
 };
 
 type RecordItem = {
@@ -121,23 +120,43 @@ const toIsoFromDateTime = (dateKey: string, time: string) => {
   return `${dateKey}T${hh}:${mi}:00`;
 };
 
-const toRecordItem = (session: StudySession): RecordItem => ({
-  id: `session-${session.sessionId}`,
-  sessionId: session.sessionId,
-  subjectId: session.subject,
-  subjectName: session.subject,
-  durationMinutes: Math.max(1, Math.ceil(session.durationSeconds / 60)),
-  startTime: formatClockFromIso(session.startAt),
-  endTime: formatClockFromIso(session.endAt),
-});
+const toRecordItem = (session: StudySession): RecordItem | null => {
+  if (!session.endAt) return null;
+  return {
+    id: `session-${session.sessionId}`,
+    sessionId: session.sessionId,
+    subjectId: session.subject,
+    subjectName: session.subject,
+    durationMinutes: Math.max(1, Math.ceil(session.durationSeconds / 60)),
+    startTime: formatClockFromIso(session.startAt),
+    endTime: formatClockFromIso(session.endAt),
+  };
+};
 
 const toRecordsByDate = (sessions: StudySession[]) =>
   sessions.reduce<Record<string, RecordItem[]>>((acc, session) => {
+    const item = toRecordItem(session);
+    if (!item) return acc;
     const dateKey = session.date;
     const next = acc[dateKey] ?? [];
-    acc[dateKey] = [toRecordItem(session), ...next];
+    acc[dateKey] = [item, ...next];
     return acc;
   }, {});
+
+const mergeRecordsByDate = (
+  prev: Record<string, RecordItem[]>,
+  incoming: Record<string, RecordItem[]>
+) => {
+  const next = { ...prev };
+  Object.entries(incoming).forEach(([key, items]) => {
+    const current = next[key] ?? [];
+    const map = new Map<string, RecordItem>();
+    current.forEach((item) => map.set(item.id, item));
+    items.forEach((item) => map.set(item.id, item));
+    next[key] = Array.from(map.values());
+  });
+  return next;
+};
 
 const parseClockToMinutes = (value: string) => {
   const parts = value.split(":").map(Number);
@@ -152,6 +171,17 @@ const toTimelineMinutes = (minutes: number) => {
   while (value < 0) value += 1440;
   return value % 1440;
 };
+
+const parseHMToMinutes = (value: string) => {
+  const parts = value.split(":").map(Number);
+  if (parts.length < 2) return null;
+  const [h, m] = parts;
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+};
+
+const isOverlap = (startA: number, endA: number, startB: number, endB: number) =>
+  startA < endB && startB < endA;
 
 const calcDurationMinutes = (start: string, end: string) => {
   const [sh, sm] = start.split(":").map(Number);
@@ -172,6 +202,7 @@ export default function DailyRecordPage({
   readOnly,
   onBack,
   onOpenDatePicker,
+  onRefreshSessions,
 }: DailyRecordPageProps) {
   const [recordModalOpen, setRecordModalOpen] = useState(false);
   const [activeSubjectId, setActiveSubjectId] = useState(subjects[0]?.id ?? "");
@@ -188,6 +219,7 @@ export default function DailyRecordPage({
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
   const startRequestRef = useRef<ReturnType<typeof menteeStudySessionApi.start> | null>(null);
+  const stopRequestRef = useRef(false);
   const [recordsByDate, setRecordsByDate] = useState<Record<string, RecordItem[]>>(
     {}
   );
@@ -196,8 +228,8 @@ export default function DailyRecordPage({
   const subjectColorMap = useMemo(() => {
     const map = new Map<string, (typeof SUBJECT_COLORS)[number]>();
     const names = [
-      ...subjects.map((subject) => subject.id),
-      ...records.map((record) => record.subjectId),
+      ...subjects.map((subject) => subject.name),
+      ...records.map((record) => record.subjectName ?? record.subjectId),
     ];
     const unique = Array.from(new Set(names.filter(Boolean)));
     unique.forEach((name, index) => {
@@ -214,7 +246,7 @@ export default function DailyRecordPage({
     const runningSeconds = autoRunning ? autoElapsedSec % 60 : 0;
     return subjects.map((subject) => {
       const baseMinutes = records
-        .filter((record) => record.subjectId === subject.id)
+        .filter((record) => record.subjectId === subject.name)
         .reduce((acc, record) => acc + record.durationMinutes, 0);
       const extra =
         autoRunning && subject.id === runningSubjectId ? runningMinutes : 0;
@@ -223,6 +255,11 @@ export default function DailyRecordPage({
       return { ...subject, minutes: baseMinutes + extra, seconds };
     });
   }, [subjects, records, autoRunning, autoElapsedSec, runningSubjectId]);
+
+  const totalStudyMinutes = useMemo(
+    () => subjectTimes.reduce((acc, cur) => acc + (cur.minutes ?? 0), 0),
+    [subjectTimes]
+  );
 
   const groupedRecords = useMemo(() => {
     const order = new Map<string, number>([
@@ -284,12 +321,9 @@ export default function DailyRecordPage({
     menteeStudySessionApi.getByDate(dateKey)
       .then((res) => {
         const sessions = res.data ?? [];
-        setRecordsByDate((prev) => ({
-          ...prev,
-          ...toRecordsByDate(sessions),
-        }));
+        setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(sessions)));
         const running = sessions.find((session) => !session.endAt && session.mode === "AUTO");
-        if (running && !autoRunning) {
+        if (running && !autoRunning && !stopRequestRef.current) {
           setRunningSessionId(running.sessionId);
           setRunningSubjectId(running.subject);
           const start = toKstDate(running.startAt);
@@ -298,7 +332,7 @@ export default function DailyRecordPage({
         }
       })
       .catch(() => {
-        setRecordsByDate((prev) => ({ ...prev, [dateKey]: [] }));
+        // keep existing records on error to avoid wiping optimistic entries
       });
   }, [dateKey, autoRunning]);
 
@@ -332,6 +366,7 @@ export default function DailyRecordPage({
 
   const startAuto = (subjectId: string) => {
     if (startRequestRef.current) return;
+    stopRequestRef.current = false;
     const now = new Date();
     const subjectName = subjects.find((subject) => subject.id === subjectId)?.name ?? subjectId;
     setRunningSubjectId(subjectId);
@@ -359,6 +394,7 @@ export default function DailyRecordPage({
       resetAuto();
       return;
     }
+    stopRequestRef.current = true;
     const end = new Date();
     const durationSeconds = Math.floor((end.getTime() - autoStart.getTime()) / 1000);
     const durationMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
@@ -367,38 +403,19 @@ export default function DailyRecordPage({
     const runningSubject = subjectTimes.find(
       (subject) => subject.id === runningSubjectId
     );
-    if (durationSeconds > 0 && runningSubject) {
-      setRecordsByDate((prev) => {
-        const next = prev[dateKey] ?? [];
-        return {
-          ...prev,
-          [dateKey]: [
-            {
-              id: `record-${Date.now()}`,
-              subjectId: runningSubject.id,
-              subjectName: runningSubject.name,
-              durationMinutes,
-              startTime: startLabel,
-              endTime: endLabel,
-            },
-            ...next,
-          ],
-        };
-      });
-    }
+    // 기록은 중지 응답에서만 반영하여 중복 생성 방지
     const finalizeStop = (sessionId: number) => {
       menteeStudySessionApi.stop(sessionId, { endAt: formatLocalDateTime(end) })
         .then((res) => {
-          setRecordsByDate((prev) => ({
-            ...prev,
-            ...toRecordsByDate(res.data.sessions),
-          }));
+          setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(res.data.sessions)));
+          onRefreshSessions?.();
         })
         .catch(() => {
           // ignore to keep UI responsive
         })
         .finally(() => {
           startRequestRef.current = null;
+          stopRequestRef.current = false;
         });
     };
 
@@ -408,6 +425,7 @@ export default function DailyRecordPage({
       startRequestRef.current
         .then((res) => finalizeStop(res.data.sessionId))
         .catch(() => {
+          stopRequestRef.current = false;
           // ignore
         });
     }
@@ -475,41 +493,6 @@ export default function DailyRecordPage({
       }
     });
 
-    if (autoRunning && autoStart && runningSubjectId) {
-      const now = new Date();
-      const start =
-        autoStart.getHours() * 60 +
-        autoStart.getMinutes() +
-        autoStart.getSeconds() / 60;
-      const end =
-        now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-      let startValue = start;
-      let endValue = end;
-      if (endValue <= startValue) {
-        endValue += 1440;
-      }
-      let cursor = toTimelineMinutes(startValue);
-      let endCursor = toTimelineMinutes(endValue);
-      if (endCursor <= cursor) {
-        endCursor += 1440;
-      }
-      while (cursor < endCursor) {
-        const hourStart = Math.floor(cursor / 60) * 60;
-        const hourEnd = hourStart + 60;
-        const segmentEnd = Math.min(endCursor, hourEnd);
-        const displayStart = cursor % 1440;
-        if (displayStart < 1440) {
-          addSegment(
-            runningSubjectId,
-            displayStart,
-            segmentEnd - cursor,
-            `running-${cursor}`
-          );
-        }
-        cursor = segmentEnd;
-      }
-    }
-
     return segments;
   }, [records, autoRunning, autoStart, runningSubjectId]);
 
@@ -522,6 +505,7 @@ export default function DailyRecordPage({
         return;
       }
       stopAuto();
+      setRecordModalOpen(false);
       return;
     }
     startAuto(activeSubjectId);
@@ -535,6 +519,28 @@ export default function DailyRecordPage({
       setManualError("종료 시간은 시작 시간보다 늦어야 합니다");
       return;
     }
+    const newStart = parseHMToMinutes(manualStart);
+    const newEnd = parseHMToMinutes(manualEnd);
+    if (newStart === null || newEnd === null) {
+      setManualError("시간 형식이 올바르지 않습니다");
+      return;
+    }
+    const hasOverlap = records.some((record) => {
+      const start = parseClockToMinutes(record.startTime);
+      const end = parseClockToMinutes(record.endTime);
+      if (start === null || end === null) return false;
+      let s = start;
+      let e = end;
+      if (e <= s) e += 1440;
+      let ns = newStart;
+      let ne = newEnd;
+      if (ne <= ns) ne += 1440;
+      return isOverlap(ns, ne, s, e);
+    });
+    if (hasOverlap) {
+      setManualError("해당 시간대에 이미 기록이 있어요");
+      return;
+    }
     setManualError("");
     const startAt = toIsoFromDateTime(dateKey, manualStart);
     const endAt = toIsoFromDateTime(dateKey, manualEnd);
@@ -544,10 +550,8 @@ export default function DailyRecordPage({
       endAt,
     })
       .then((res) => {
-        setRecordsByDate((prev) => ({
-          ...prev,
-          ...toRecordsByDate(res.data.sessions),
-        }));
+        setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(res.data.sessions)));
+        onRefreshSessions?.();
       })
       .catch(() => {
         setManualError("기록 저장에 실패했어요. 잠시 후 다시 시도해주세요.");
@@ -599,7 +603,7 @@ export default function DailyRecordPage({
                 {subject.name}
               </span>
               <span className="text-[11px] font-semibold text-gray-500">
-                {formatTimeHHMMSS(subject.minutes, subject.seconds)}
+                {formatTimeHM(subject.minutes)}
               </span>
             </button>
           );
@@ -608,6 +612,18 @@ export default function DailyRecordPage({
           <div className="text-sm font-semibold text-gray-400">과목이 없습니다.</div>
         )}
       </div>
+      {autoRunning && runningSubjectId && (
+        <button
+          type="button"
+          onClick={() => openRecordModal(runningSubjectId)}
+          className="flex w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+          aria-label="현재 진행 중 기록 열기"
+        >
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          현재 진행 중: {subjectTimes.find((s) => s.id === runningSubjectId)?.name ?? runningSubjectId}
+          <span className="ml-auto text-emerald-600">{elapsedLabel}</span>
+        </button>
+      )}
 
       <div>
         <div className="mt-3 overflow-hidden rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 via-[#F7F8FC] to-[#F1F3F9] p-0 shadow-sm">
@@ -678,7 +694,12 @@ export default function DailyRecordPage({
       </div>
 
       <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
-        <div className="text-sm font-semibold text-gray-700">오늘 기록</div>
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-gray-700">오늘 기록</div>
+          <div className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+            총 공부시간 {formatTimeHM(totalStudyMinutes)}
+          </div>
+        </div>
         {readOnly && (
           <div className="mt-2 text-xs font-semibold text-gray-400">
             오늘 날짜에서만 기록할 수 있어요.
@@ -715,9 +736,6 @@ export default function DailyRecordPage({
                       >
                         <HiOutlineClock size={15} className="text-white" />
                       </span>
-                      <span className="font-semibold text-gray-700">
-                        {record.subjectName}
-                      </span>
                       <span className="text-gray-400">
                         {formatDurationLabel(record.durationMinutes)} : {record.startTime}-
                         {record.endTime}
@@ -727,14 +745,24 @@ export default function DailyRecordPage({
                       <button
                         type="button"
                         onClick={() => {
-                          if (!record.sessionId) return;
+                          if (!record.sessionId) {
+                            setRecordsByDate((prev) => ({
+                              ...prev,
+                              [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
+                            }));
+                            onRefreshSessions?.();
+                            return;
+                          }
                           menteeStudySessionApi
                             .delete(record.sessionId)
                             .then(() => {
                               setRecordsByDate((prev) => ({
                                 ...prev,
-                                [dateKey]: (prev[dateKey] ?? []).filter((item) => item.id !== record.id),
+                                [dateKey]: (prev[dateKey] ?? []).filter(
+                                  (item) => item.sessionId !== record.sessionId && item.id !== record.id
+                                ),
                               }));
+                              onRefreshSessions?.();
                             })
                             .catch(() => {});
                         }}
