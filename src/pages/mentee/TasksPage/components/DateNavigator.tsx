@@ -2,9 +2,10 @@ interface DateNavigatorProps {
   label: string;
   onPrev: () => void;
   onNext: () => void;
+  onOpen?: () => void;
 }
 
-export default function DateNavigator({ label, onPrev, onNext }: DateNavigatorProps) {
+export default function DateNavigator({ label, onPrev, onNext, onOpen }: DateNavigatorProps) {
   return (
     <div className="flex items-center justify-center">
       <div className="flex items-center gap-3 rounded-[26px] border border-gray-200 bg-white px-3 py-4 shadow-sm">
@@ -16,9 +17,20 @@ export default function DateNavigator({ label, onPrev, onNext }: DateNavigatorPr
         >
           ‹
         </button>
-        <div className="min-w-[140px] text-center text-base font-semibold text-gray-900">
-          {label}
-        </div>
+        {onOpen ? (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="min-w-[140px] text-center text-base font-semibold text-gray-900 bg-transparent"
+            aria-label="날짜 선택"
+          >
+            {label}
+          </button>
+        ) : (
+          <div className="min-w-[140px] text-center text-base font-semibold text-gray-900">
+            {label}
+          </div>
+        )}
         <button
           type="button"
           onClick={onNext}
