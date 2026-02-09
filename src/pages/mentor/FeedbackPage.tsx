@@ -464,7 +464,7 @@ export default function FeedbackPage() {
                                 s.isCompleted ? "text-emerald-700 ring-emerald-200" : "text-amber-700 ring-amber-200"
                               )}
                             >
-                              {s.isCompleted ? "해결 완료" : "미완료"}
+                              {s.isCompleted ? "피드백 완료" : "피드백 대기"}
                             </div>
                               </div>
 

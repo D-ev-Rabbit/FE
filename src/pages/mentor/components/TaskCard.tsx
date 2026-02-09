@@ -37,7 +37,7 @@ export function TaskCard({ item }: { item: TaskCardItem }) {
               : "bg-gray-50 text-gray-600 ring-gray-200",
           ].join(" ")}
         >
-          {item.feedbackDone ? "피드백 완료" : "미완료"}
+          {item.feedbackDone ? "피드백 완료" : "피드백 대기"}
         </span>
       </div>
     </button>
