@@ -94,10 +94,12 @@ export default function MenteeTaskDetailPage() {
       }))
       .filter((u) => u.url);
     setUploads(next);
-    if (activeImageIndex >= next.length) {
-      setActiveImageIndex(Math.max(0, next.length - 1));
-    }
-  }, [task, activeImageIndex]);
+  }, [task?.files, task?.menteeId]);
+
+  const uploadsLength = uploads.length;
+  useEffect(() => {
+    setActiveImageIndex((prev) => (prev >= uploadsLength ? Math.max(0, uploadsLength - 1) : prev));
+  }, [uploadsLength]);
 
   // Bearer로 파일 fetch → blob URL (미리보기/PDF 표시용)
   useEffect(() => {
