@@ -4,11 +4,18 @@ type StatusItem = {
   label: string;
   current: number;
   total: number;
-  // 진행바 색상 class (예: "bg-green-500")
   barClassName: string;
-  // 배경 트랙 색상 class (예: "bg-green-100")
   trackClassName: string;
+  /** true면 비율(0~100)에 따라 bar/track 색상 자동 적용 */
+  useRatioColor?: boolean;
 };
+
+function getRatioColor(pct: number): { bar: string; track: string } {
+  if (pct <= 0) return { bar: "bg-gray-300", track: "bg-gray-100" };
+  if (pct < 34) return { bar: "bg-red-500", track: "bg-red-100" };
+  if (pct < 67) return { bar: "bg-amber-500", track: "bg-amber-100" };
+  return { bar: "bg-green-500", track: "bg-green-100" };
+}
 
 interface StudentStatusCardProps {
   studentName: string;
@@ -43,6 +50,9 @@ export default function StudentStatusCard({
           {items.map((it) => {
             const pct =
               it.total <= 0 ? 0 : Math.min(100, Math.max(0, (it.current / it.total) * 100));
+            const colors = it.useRatioColor
+              ? getRatioColor(pct)
+              : { bar: it.barClassName, track: it.trackClassName };
 
             return (
               <div key={it.label} className="space-y-2">
@@ -53,9 +63,9 @@ export default function StudentStatusCard({
                   </p>
                 </div>
 
-                <div className={`h-2 w-full rounded-full ${it.trackClassName}`}>
+                <div className={`h-2 w-full rounded-full ${colors.track}`}>
                   <div
-                    className={`h-2 rounded-full ${it.barClassName}`}
+                    className={`h-2 rounded-full ${colors.bar}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
