@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { FaCheckCircle, FaCommentAlt, FaEye } from "react-icons/fa";
 import { SummaryBar } from "./SummaryBar";
 import { MetricCard } from "./MetricCard";
