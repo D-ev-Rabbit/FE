@@ -4,6 +4,7 @@ export type Task = {
   done?: boolean;
   time?: string;
   date?: string;
+  isMine?: boolean;
 };
 
 export type SubjectGroup = {
