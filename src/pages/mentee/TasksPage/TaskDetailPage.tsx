@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiDownload, FiChevronLeft, FiEye, FiEyeOff, FiTrash2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
@@ -35,8 +35,7 @@ export default function MenteeTaskDetailPage() {
   const [activePinId, setActivePinId] = useState<number | null>(null);
   const [showPins, setShowPins] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  /** 학습 점검하기에 표시할 파일 = 멘티가 올린 것만 (멘토 PDF 제외) */
-  const [uploads, setUploads] = useState<Array<{ id: number; url: string; type?: string; name?: string; originalIndex: number }>>([]);
+  const [uploads, setUploads] = useState<Array<{ id: number; url: string; type?: string; name?: string }>>([]);
   const [blobUrlsByUrl, setBlobUrlsByUrl] = useState<Record<string, string>>({});
   const [pendingUploads, setPendingUploads] = useState<Array<{ id: string; url: string; file: File }>>([]);
   const [feedbackPinsByImage, setFeedbackPinsByImage] = useState<Record<number, { id: number; x: number; y: number; text: string }[]>>({});
@@ -77,29 +76,23 @@ export default function MenteeTaskDetailPage() {
   };
 
   useEffect(() => {
-    if (!task?.files || task.menteeId == null) {
+    if (!task?.files) {
       setUploads([]);
       return;
     }
-    const menteeOnly = task.files
-      .map((f, originalIndex) => ({ f, originalIndex }))
-      .filter(({ f }) => f.creatorId === task.menteeId);
-    const next = menteeOnly
-      .map(({ f, originalIndex }) => ({
+    const next = task.files
+      .map((f) => ({
         id: f.fileId,
         url: normalizeFileUrl(f.url ?? ""),
         type: f.type,
         name: f.name,
-        originalIndex,
       }))
-      .filter((u) => u.url);
+      .filter((f) => f.url);
     setUploads(next);
-  }, [task?.files, task?.menteeId]);
-
-  const uploadsLength = uploads.length;
-  useEffect(() => {
-    setActiveImageIndex((prev) => (prev >= uploadsLength ? Math.max(0, uploadsLength - 1) : prev));
-  }, [uploadsLength]);
+    if (activeImageIndex >= next.length) {
+      setActiveImageIndex(Math.max(0, next.length - 1));
+    }
+  }, [task?.files]);
 
   // Bearer로 파일 fetch → blob URL (미리보기/PDF 표시용)
   useEffect(() => {
@@ -259,7 +252,6 @@ export default function MenteeTaskDetailPage() {
           url: normalizeFileUrl(r.data.url),
           type: r.data.type?.toLowerCase(),
           name: r.data.name,
-          originalIndex: -1,
         }));
         nextUploads = [...uploads, ...uploaded];
         setUploads(nextUploads);
@@ -307,23 +299,14 @@ export default function MenteeTaskDetailPage() {
       setIsSavingTask(false);
     }
   };
-  /** 멘토가 올린 파일(과제 PDF 등) = 다운로드용 */
-  const mentorFiles = useMemo(() => {
-    if (!task?.files || task.menteeId == null) return [];
-    return task.files.filter((f) => f.creatorId != null && f.creatorId !== task.menteeId);
-  }, [task?.files, task?.menteeId]);
-
   const activeIsPending = activeImageIndex >= uploads.length;
-  const activeOriginalIndex = uploads[activeImageIndex]?.originalIndex ?? -1;
-  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeOriginalIndex] ?? [];
+  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeImageIndex] ?? [];
 
   const handleAssignmentDownload = () => {
-    const first = mentorFiles[0];
+    const first = uploads[0];
     if (!first) return;
-    const url = normalizeFileUrl(first.url ?? "");
-    if (!url) return;
     fileApi
-      .fetchFileBlob(url)
+      .fetchFileBlob(first.url)
       .then((blob) => {
         const u = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -373,7 +356,7 @@ export default function MenteeTaskDetailPage() {
               <button
                 type="button"
                 onClick={handleAssignmentDownload}
-                disabled={mentorFiles.length === 0}
+                disabled={uploads.length === 0}
                 className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-500 disabled:opacity-50"
               >
                 <FiDownload size={12} />
