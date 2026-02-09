@@ -11,6 +11,10 @@ export type MentorSummarySubject = {
   todoCompleted: number;
   feedbackTotal: number;
   feedbackRead: number;
+  /** 멘티가 제출한 파일 수 */
+  submittedFileCount?: number;
+  /** 피드백이 1개 이상 작성된 과제(Todo) 수 */
+  feedbackCompletedTodoCount?: number;
   todoCompletionRate: number;
   feedbackReadRate: number;
 };
