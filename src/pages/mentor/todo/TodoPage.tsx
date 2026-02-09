@@ -95,10 +95,7 @@ export default function MentorTodoPage(){
 
   const subjectToApi = (value: Subject | undefined) => {
     if (!value || value === "ALL") return undefined;
-    if (value === "KOREAN") return "국어";
-    if (value === "ENGLISH") return "영어";
-    if (value === "MATH") return "수학";
-    return undefined;
+    return value; // "KOREAN" | "ENGLISH" | "MATH"
   };
 
   const subjectFromApi = (value?: string) => {
@@ -215,7 +212,7 @@ export default function MentorTodoPage(){
       mentorTodoApi.createTodo(Number(selectedMenteeId), {
         title,
         date,
-        subject: subjectToApi(subject) ?? subject,
+        subject: subjectToApi(subject),
         goal: "",
         isCompleted: false,
       })
@@ -246,7 +243,7 @@ export default function MentorTodoPage(){
       mentorTodoApi.updateTodo(editingTodo.id, {
         title,
         date,
-        subject: subjectToApi(subject) ?? subject,
+        subject: subjectToApi(subject),
         goal: "",
         isCompleted: editingTodo.done,
       })
