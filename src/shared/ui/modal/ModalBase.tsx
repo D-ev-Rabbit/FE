@@ -41,9 +41,11 @@ export default function ModalBase({
         onClick={() => (closeOnBackdrop ? onClose() : undefined)}
       />
       {/* content */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
-        <div className="w-full max-w-xl max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
-          {children}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 w-full">
+        <div className="mx-auto w-full max-w-xl max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
+          <div className="flex justify-center">
+            {children}
+          </div>
         </div>
       </div>
     </div>
