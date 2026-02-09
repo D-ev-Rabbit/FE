@@ -74,11 +74,11 @@ export default function FeedbackPage() {
 
   const subjectBadge = (subject: string) => {
     switch (subject) {
-      case "국어":
+      case "KOREAN":
         return "bg-rose-50 text-rose-700 ring-rose-200";
-      case "수학":
+      case "MATH":
         return "bg-blue-50 text-blue-700 ring-blue-200";
-      case "영어":
+      case "ENGLISH":
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
       default:
         return "bg-gray-50 text-gray-700 ring-gray-200";
@@ -86,7 +86,9 @@ export default function FeedbackPage() {
   };
 
   const toSubject = (value?: string): Subject => {
-    if (value === "국어" || value === "영어" || value === "수학") return value;
+    if (value === "국어" || value === "KOREAN") return "국어";
+    if (value === "영어" || value === "ENGLISH") return "영어";
+    if (value === "수학" || value === "MATH") return "수학";
     return "국어";
   };
 
