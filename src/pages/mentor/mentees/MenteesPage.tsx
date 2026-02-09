@@ -134,7 +134,8 @@ export default function MenteesPage() {
       </div>
 
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[560px_1fr]">
+      <div className="flex flex-col gap-6">
+        {/* 위: 멘티 목록 */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
 
@@ -256,14 +257,15 @@ export default function MenteesPage() {
             </div>
           </div>
         </section>
+
+        {/* 아래: 대시보드(날짜 + 현황 + 액션) */}
         <aside className="space-y-4">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-            {/* 현황 + 액션*/}
-            <aside className="w-full min-w-0 flex-1 space-y-4">
+          <div className="flex flex-col gap-6">
+            <div className="w-full min-w-0 space-y-4">
               <div className="text-sm font-extrabold text-gray-900 p-4"></div>
 
               {/* 날짜 */}
-              <div className="flex lg:w-[560px] gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex w-full max-w-xl gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-sm text-gray-400 ">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
                     <FaRegCalendar />
@@ -298,7 +300,7 @@ export default function MenteesPage() {
               </div>
 
               {/* 현황 카드 (해당 일자별) */}
-              <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm lg:w-[560px]">
+              <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm w-full max-w-2xl">
                 <div className="mb-1 text-sm font-extrabold text-gray-900">현황</div>
                 <p className="mb-4 text-xs text-gray-500">멘토링 과제 수행률을 한눈에 확인하세요</p>
                 {selectedStudent ? (
@@ -318,7 +320,7 @@ export default function MenteesPage() {
               </div>
 
               {/* 액션 버튼 */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 lg:w-[560px]">
+              <div className="grid w-full max-w-2xl gap-4 sm:grid-cols-2">
                 <ActionCard
                   label="할 일 배정하기"
                   onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
@@ -330,7 +332,7 @@ export default function MenteesPage() {
                   iconLeft={<FaPen className="h-4 w-4" />}
                 />
               </div>
-            </aside>
+            </div>
           </div>
         </aside>
       </div>
