@@ -73,7 +73,6 @@ export default function MentorStatusDashboard({
   submittedCount,
   feedbackWrittenCount,
   feedbackConfirmedCount,
-  studentName,
   onClick,
   className,
 }: MentorStatusDashboardProps) {
