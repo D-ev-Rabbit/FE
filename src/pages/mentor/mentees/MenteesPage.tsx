@@ -308,20 +308,23 @@ export default function MenteesPage() {
                           total: aggregated.todoTotal,
                           barClassName: "bg-green-500",
                           trackClassName: "bg-green-100",
+                          useRatioColor: true,
                         },
                         {
                           label: "제출파일",
-                          current: aggregated.feedbackRead,
-                          total: aggregated.feedbackTotal,
+                          current: aggregated.pendingFeedbackTodoCount,
+                          total: aggregated.todoTotal,
                           barClassName: "bg-purple-500",
                           trackClassName: "bg-purple-100",
+                          useRatioColor: true,
                         },
                         {
                           label: "피드백 작성 완료",
-                          current: aggregated.feedbackRead,
-                          total: aggregated.feedbackTotal,
+                          current: aggregated.feedbackCompletedTodoCount,
+                          total: aggregated.todoTotal,
                           barClassName: "bg-blue-500",
                           trackClassName: "bg-blue-100",
+                          useRatioColor: true,
                         },
                       ]}
                       onClick={() => setStatusModalOpen(true)}
@@ -348,61 +351,16 @@ export default function MenteesPage() {
                   onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
                   iconLeft={<FaTasks className="h-4 w-4" />}
                 />
-<<<<<<< HEAD
                 <ActionCard
                   label="피드백 작성하기"
                   onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
                   iconLeft={<FaPen className="h-4 w-4" />}
-=======
-              </ModalBase>
-            )}
-          </div>
-
-          {/* 현황 카드 */}
-          <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
-            {selectedStudent ? (
-              <>
-                <StudentStatusCard
-                  studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                  periodLabel="Today"
-                  items={[
-                    {
-                      label: "To do",
-                      current: aggregated.todoCompleted,
-                      total: aggregated.todoTotal,
-                      barClassName: "bg-green-500",
-                      trackClassName: "bg-green-100",
-                      useRatioColor: true,
-                    },
-                    {
-                      label: "제출파일",
-                      current: aggregated.pendingFeedbackTodoCount,
-                      total: aggregated.todoTotal,
-                      barClassName: "bg-purple-500",
-                      trackClassName: "bg-purple-100",
-                      useRatioColor: true,
-                    },
-                    {
-                      label: "피드백 작성 완료",
-                      current: aggregated.feedbackCompletedTodoCount,
-                      total: aggregated.todoTotal,
-                      barClassName: "bg-blue-500",
-                      trackClassName: "bg-blue-100",
-                      useRatioColor: true,
-                    },
-                  ]}
-                  onClick={() => setStatusModalOpen(true)}
->>>>>>> feat/mentee-status-card-metrics
                 />
               </div>
-            </aside> 
+            </aside>
           </div>
-        </aside>
+        </div>
       </div>
-
-     
-    
-
     </div>
   );
 }
