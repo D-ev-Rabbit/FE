@@ -474,9 +474,6 @@ export default function FeedbackPage() {
                                   {s.title ?? `${s.subject} 과제`}
                                 </div>
                                 <div className="mt-1 text-xs text-gray-500">제출일: {s.submittedAt}</div>
-                                <div className="mt-2 text-xs text-gray-500">
-                                  이미지 <span className="font-bold text-gray-700">{s.fileCount ?? s.files?.length ?? 0}</span>장
-                                </div>
                               </div>
                             </button>
                           ))}
