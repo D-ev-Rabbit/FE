@@ -93,6 +93,7 @@ export default function MenteesPage() {
   // 캘린더
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  
 
   const pcTotalPages = useMemo(
     () => Math.max(1, Math.ceil(mentees.length / pcPerPage)),
@@ -117,11 +118,13 @@ export default function MenteesPage() {
         <div className="mt-2 text-sm text-gray-500">멘티별 현황을 확인 할 수 있어요.</div>
       </div>
 
-      <div className="grid items-start gap-8 lg:gap-12 [grid-template-columns:repeat(auto-fit,minmax(720px,1fr))]">
-        <section className="w-full space-y-4">
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[560px_1fr]">
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-extrabold text-gray-900">멘티 목록</div>
-            <div className="flex items-center gap-2 sm:hidden">
+
+            {/* 모바일: 이전/다음 */}
+            <div className="flex items-center gap-2 lg:hidden">
               <button
                 type="button"
                 onClick={() => {
@@ -151,6 +154,8 @@ export default function MenteesPage() {
                 ›
               </button>
             </div>
+
+            {/* PC: 페이지네이션 */}
             <div className="hidden items-center gap-2 lg:flex">
               <button
                 type="button"
@@ -172,7 +177,10 @@ export default function MenteesPage() {
               </button>
             </div>
           </div>
-          <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm  shrink-0 min-w-[600px]">
+
+          {/* 멘티 리스트 카드 */}
+          <div className="w-full rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+            
             <div className="grid grid-cols-2 gap-3 lg:hidden">
               {mentees.map((m) => (
                 <button
@@ -197,8 +205,11 @@ export default function MenteesPage() {
                       )}
                       aria-hidden
                     >
-                      <span className="text-sm font-bold"><HiOutlineUser/></span>
+                      <span className="text-sm font-bold">
+                        <HiOutlineUser />
+                      </span>
                     </div>
+
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-gray-500">
                         고등학교 {m.grade}학년
@@ -214,6 +225,8 @@ export default function MenteesPage() {
                 </button>
               ))}
             </div>
+
+            {/* PC: 테이블 */}
             <div className="hidden lg:block">
               <MenteeList
                 rows={pcVisibleMentees.map((m) => ({
@@ -228,108 +241,116 @@ export default function MenteesPage() {
             </div>
           </div>
         </section>
+        <aside className="space-y-4">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            {/* 현황 + 액션*/}
+            <aside className="w-full min-w-0 flex-1 space-y-4">
+              <div className="text-sm font-extrabold text-gray-900 p-4"></div>
 
-        {/* 오른쪽 aside */}
-        <aside className="w-full space-y-4">
-          <div className="text-sm font-extrabold text-gray-900">현황</div>
-          {/* 날짜 + 버튼 */}
-          <div className="flex flex-col gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                <FaRegCalendar />
-              </span>
-              <span>
-                {selectedDate.toLocaleDateString("KR", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            {/* 캘린더 날짜 선택버튼 */}
-            <button
-              type="button"
-              onClick={() => setCalendarOpen((prev) => !prev)}
-              className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              날짜 선택
-            </button>
+              {/* 날짜 */}
+              <div className="flex lg:w-[560px] gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-400 ">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+                    <FaRegCalendar />
+                  </span>
+                  <span>
+                    {selectedDate.toLocaleDateString("KR", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
 
-            {/* 캘린더 팝업 */}
-            {calendarOpen && (
-              <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
-                <CalendarPicker
-                  selected={selectedDate}
-                  onSelect={(d) => setSelectedDate(d)}
-                  onClose={() => setCalendarOpen(false)} // 날짜 선택하면 닫기
+                <button
+                  type="button"
+                  onClick={() => setCalendarOpen((prev) => !prev)}
+                  className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                  날짜 선택
+                </button>
+
+                {calendarOpen && (
+                  <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
+                    <CalendarPicker
+                      selected={selectedDate}
+                      onSelect={(d) => setSelectedDate(d)}
+                      onClose={() => setCalendarOpen(false)}
+                    />
+                  </ModalBase>
+                )}
+              </div>
+
+              {/* 현황 카드 */}
+              <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm lg:w-[560px]">
+                <div className="text-sm font-extrabold text-gray-900 p-4">현황</div>
+                {selectedStudent ? (
+                  <>
+                    <StudentStatusCard
+                      studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
+                      periodLabel="Today"
+                      items={[
+                        {
+                          label: "To do",
+                          current: aggregated.todoCompleted,
+                          total: aggregated.todoTotal,
+                          barClassName: "bg-green-500",
+                          trackClassName: "bg-green-100",
+                        },
+                        {
+                          label: "제출파일",
+                          current: aggregated.feedbackRead,
+                          total: aggregated.feedbackTotal,
+                          barClassName: "bg-purple-500",
+                          trackClassName: "bg-purple-100",
+                        },
+                        {
+                          label: "피드백 작성 완료",
+                          current: aggregated.feedbackRead,
+                          total: aggregated.feedbackTotal,
+                          barClassName: "bg-blue-500",
+                          trackClassName: "bg-blue-100",
+                        },
+                      ]}
+                      onClick={() => setStatusModalOpen(true)}
+                    />
+
+                    <ModalBase open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
+                      <StudentStatusDetailModal
+                        studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
+                        open={statusModalOpen}
+                        onClose={() => setStatusModalOpen(false)}
+                        summary={summary}
+                      />
+                    </ModalBase>
+                  </>
+                ) : (
+                  <p className="p-4 text-sm text-muted-foreground">위에서 멘티를 선택하세요.</p>
+                )}
+              </div>
+
+              {/* 액션 버튼 */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 lg:w-[560px]">
+                <ActionCard
+                  label="할 일 배정하기"
+                  onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
+                  iconLeft={<FaTasks className="h-4 w-4" />}
                 />
-              </ModalBase>
-            )}
-          </div>
-
-          {/* 현황 카드 */}
-          <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
-            {selectedStudent ? (
-              <>
-                <StudentStatusCard
-                  studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                  periodLabel="Today"
-                  items={[
-                    {
-                      label: "To do",
-                      current: aggregated.todoCompleted,
-                      total: aggregated.todoTotal,
-                      barClassName: "bg-green-500",
-                      trackClassName: "bg-green-100",
-                    },
-                    {
-                      label: "제출파일",
-                      current: aggregated.feedbackRead,
-                      total: aggregated.feedbackTotal,
-                      barClassName: "bg-purple-500",
-                      trackClassName: "bg-purple-100",
-                    },
-                    {
-                      label: "피드백 작성 완료",
-                      current: aggregated.feedbackRead,
-                      total: aggregated.feedbackTotal,
-                      barClassName: "bg-blue-500",
-                      trackClassName: "bg-blue-100",
-                    },
-                  ]}
-                  onClick={() => setStatusModalOpen(true)}
+                <ActionCard
+                  label="피드백 작성하기"
+                  onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
+                  iconLeft={<FaPen className="h-4 w-4" />}
                 />
-
-                <ModalBase open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
-                  <StudentStatusDetailModal
-                    studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                    open={statusModalOpen}
-                    onClose={() => setStatusModalOpen(false)}
-                    summary={summary}
-                  />
-                </ModalBase>
-              </>
-            ) : (
-              <p className="p-4 text-sm text-muted-foreground">왼쪽에서 멘티를 선택하세요.</p>
-            )}
-          </div>
-
-          {/* 액션 버튼 */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ActionCard
-              label="할 일 배정하기"
-              onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
-              iconLeft={<FaTasks className="h-4 w-4" />}
-            />
-            <ActionCard
-              label="피드백 작성하기"
-              onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
-              iconLeft={<FaPen className="h-4 w-4" />}
-            />
+              </div>
+            </aside> 
           </div>
         </aside>
       </div>
+
+     
+    
+
     </div>
   );
 }
