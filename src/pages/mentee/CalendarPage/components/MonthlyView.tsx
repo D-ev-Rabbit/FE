@@ -282,14 +282,16 @@ export default function MonthlyView({
                             {task.title}
                           </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => onOpenTaskActions(subject.id, task)}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 p-0 text-gray-500 shadow-none"
-                          aria-label={`${task.title} 관리`}
-                        >
-                          <HiOutlineEllipsisHorizontal className="h-4 w-4 text-gray-500" />
-                        </button>
+                        {task.isMine !== false && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenTaskActions(subject.id, task)}
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 p-0 text-gray-500 shadow-none"
+                            aria-label={`${task.title} 관리`}
+                          >
+                            <HiOutlineEllipsisHorizontal className="h-4 w-4 text-gray-500" />
+                          </button>
+                        )}
                       </div>
                     ))
                   )}

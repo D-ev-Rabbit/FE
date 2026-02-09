@@ -1,4 +1,5 @@
 import { uploadAxios } from "@/api/uploadAxios";
+import { axiosInstance } from "@/api/axiosInstance";
 
 export type FileUploadResponse = {
   id: number;
@@ -18,9 +19,12 @@ export type MentorTodoFile = {
   creatorId: number;
 };
 
-/** 다운로드/미리보기용 URL 반환 (baseURL 미설정 시 상대 경로 그대로) */
+/** 다운로드/미리보기용 URL 반환 (base 미설정 시 상대 경로 그대로) */
 export function getFileDownloadUrl(fileId: number): string {
-  const base = uploadAxios.defaults.baseURL ?? "";
+  const base =
+    (uploadAxios.defaults.baseURL ?? "") ||
+    (axiosInstance.defaults.baseURL ?? "") ||
+    (typeof window !== "undefined" ? window.location.origin : "");
   const path = `/api/files/${fileId}/download`;
   return base ? `${base.replace(/\/$/, "")}${path}` : path;
 }
@@ -37,7 +41,12 @@ export const fileApi = {
   /** Bearer 토큰으로 파일 바디 fetch (이미지 미리보기 등) */
   fetchFileBlob: (url: string) => {
     const token = localStorage.getItem("accessToken");
-    const fullUrl = url.startsWith("http") ? url : (uploadAxios.defaults.baseURL ?? "") + url;
+    const base =
+      (uploadAxios.defaults.baseURL ?? "") ||
+      (axiosInstance.defaults.baseURL ?? "") ||
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const path = url.startsWith("http") ? "" : url.replace(/^\//, "");
+    const fullUrl = url.startsWith("http") ? url : [base.replace(/\/$/, ""), path].filter(Boolean).join("/");
     return fetch(fullUrl, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then((res) => {
