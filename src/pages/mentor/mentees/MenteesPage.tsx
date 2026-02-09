@@ -81,6 +81,7 @@ export default function MenteesPage() {
         acc.feedbackTotal += cur.feedbackTotal ?? 0;
         acc.feedbackRead += cur.feedbackRead ?? 0;
         acc.submittedFileCount += cur.submittedFileCount ?? 0;
+        acc.pendingFeedbackTodoCount += cur.pendingFeedbackTodoCount ?? 0;
         acc.feedbackCompletedTodoCount += cur.feedbackCompletedTodoCount ?? 0;
         return acc;
       },
@@ -90,6 +91,7 @@ export default function MenteesPage() {
         feedbackTotal: 0,
         feedbackRead: 0,
         submittedFileCount: 0,
+        pendingFeedbackTodoCount: 0,
         feedbackCompletedTodoCount: 0,
       }
     );
@@ -295,7 +297,7 @@ export default function MenteesPage() {
                     },
                     {
                       label: "제출파일",
-                      current: aggregated.submittedFileCount,
+                      current: aggregated.pendingFeedbackTodoCount,
                       total: aggregated.todoTotal,
                       barClassName: "bg-purple-500",
                       trackClassName: "bg-purple-100",
