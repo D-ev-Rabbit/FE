@@ -76,12 +76,6 @@ const formatDurationLabel = (minutes: number) => {
   return remain === 0 ? `${hours}h` : `${hours}h ${remain}m`;
 };
 
-const formatClock = (date: Date) =>
-  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(
-    2,
-    "0"
-  )}:${String(date.getSeconds()).padStart(2, "0")}`;
-
 const toKstDate = (isoString?: string | null) => {
   if (!isoString) return null;
   return new Date(isoString);
@@ -396,13 +390,6 @@ export default function DailyRecordPage({
     }
     stopRequestRef.current = true;
     const end = new Date();
-    const durationSeconds = Math.floor((end.getTime() - autoStart.getTime()) / 1000);
-    const durationMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
-    const startLabel = formatClock(autoStart);
-    const endLabel = formatClock(end);
-    const runningSubject = subjectTimes.find(
-      (subject) => subject.id === runningSubjectId
-    );
     // 기록은 중지 응답에서만 반영하여 중복 생성 방지
     const finalizeStop = (sessionId: number) => {
       menteeStudySessionApi.stop(sessionId, { endAt: formatLocalDateTime(end) })
