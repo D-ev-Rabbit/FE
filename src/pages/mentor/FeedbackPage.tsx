@@ -405,6 +405,8 @@ export default function FeedbackPage() {
                                       .map((f: any) => ({
                                         fileId: f.fileId ?? f.id,
                                         url: f.url,
+                                        type: f.type,
+                                        name: f.name,
                                         feedbacks: f.feedbacks ?? [],
                                       }))
                                       .filter((f: any) => Boolean(f.url) && Boolean(f.fileId));

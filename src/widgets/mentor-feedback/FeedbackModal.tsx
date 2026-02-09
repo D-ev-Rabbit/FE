@@ -96,6 +96,11 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         return (raw && blobUrlsByUrl[raw]) || raw;
     }, [submission, activeImageIdx, blobUrlsByUrl]);
 
+    const activeFile = submission?.files[activeImageIdx];
+    const isPdf =
+        activeFile?.type?.toLowerCase() === "pdf" ||
+        (activeFile?.name ?? "").toLowerCase().endsWith(".pdf");
+
     // 현재 이미지의 핀들
     const pins: Pin[] = useMemo(() => {
         return pinsByImage[activeImageIdx] ?? [];
@@ -615,25 +620,37 @@ if (pinEl) {
                             </button>
 
                             <div className="flex min-w-0 flex-1 gap-3 overflow-x-auto pb-2">
-                                {submission.files.map((file, i) => (
-                                    <button
-                                        key={`${file.fileId}-${i}`}
-                                        type="button"
-                                        onClick={() => {
-                                            setActiveImageIdx(i);
-                                            setSelectedNumber(null);
-                                            setEditingNumber(null);
-                                            setEditingText("");
-                                            setDraggingNumber(null);
-                                        }}
-                                        className={cn(
-                                            "shrink-0 overflow-hidden rounded-2xl border transition",
-                                            i === activeImageIdx ? "border-violet-500" : "border-gray-200 hover:border-gray-300"
-                                        )}
-                                    >
-                                        <img src={blobUrlsByUrl[file.url] || file.url} alt="" className="h-16 w-24 object-cover" />
-                                    </button>
-                                ))}
+                                {submission.files.map((file, i) => {
+                                    const isFilePdf =
+                                        file.type?.toLowerCase() === "pdf" ||
+                                        (file.name ?? "").toLowerCase().endsWith(".pdf");
+                                    const thumbSrc = blobUrlsByUrl[file.url] || file.url;
+                                    return (
+                                        <button
+                                            key={`${file.fileId}-${i}`}
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveImageIdx(i);
+                                                setSelectedNumber(null);
+                                                setEditingNumber(null);
+                                                setEditingText("");
+                                                setDraggingNumber(null);
+                                            }}
+                                            className={cn(
+                                                "shrink-0 overflow-hidden rounded-2xl border transition",
+                                                i === activeImageIdx ? "border-violet-500" : "border-gray-200 hover:border-gray-300"
+                                            )}
+                                        >
+                                            {isFilePdf ? (
+                                                <div className="flex h-16 w-24 items-center justify-center bg-red-50 text-[10px] font-medium text-red-600">
+                                                    PDF
+                                                </div>
+                                            ) : (
+                                                <img src={thumbSrc} alt="" className="h-16 w-24 object-cover" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
 
                             <button
@@ -652,7 +669,7 @@ if (pinEl) {
                             </button>
                         </div>
 
-                        {/* image canvas */}
+                        {/* image / PDF canvas */}
                         <div
                             ref={wrapRef}
                             className="relative h-[52vh] sm:h-[420px] w-full overflow-hidden rounded-3xl border border-gray-200 bg-gray-50"
@@ -660,7 +677,16 @@ if (pinEl) {
                             onPointerMove={onPointerMove}
                             onPointerUp={onPointerUp}
                         >
-                            <img src={imgSrc} alt="" className="h-full w-full object-contain" />
+                            {isPdf ? (
+                                <embed
+                                    src={imgSrc}
+                                    type="application/pdf"
+                                    className="h-full w-full min-h-0"
+                                    title={activeFile?.name ?? "PDF"}
+                                />
+                            ) : (
+                                <img src={imgSrc} alt="" className="h-full w-full object-contain" />
+                            )}
 
                             {/* pins layer */}
                             <div className="absolute inset-0 border-none bg-transparent">

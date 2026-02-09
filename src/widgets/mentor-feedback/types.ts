@@ -23,6 +23,7 @@ export type Submission = {
   files: {
     fileId: number;
     url: string; // 다운로드 API 경로: /api/files/{id}/download
+    type?: string; // "image", "pdf" 등 (미리보기 분기용)
     name?: string;
     feedbacks?: { data?: string; feedbackId?: number }[];
   }[];
