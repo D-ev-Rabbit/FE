@@ -10,7 +10,7 @@ import { mentorTodoApi } from "@/api/mentor/todo";
 import type { MentorTodo } from "@/types/mentorTodo";
 import SubjectFilter, { type Subject as TodoSubject } from "@/pages/mentor/components/subjectFilter";
 import ModalBase from "@/shared/ui/modal/ModalBase";
-import calendarpicker from "@/pages/mentor/components/calendarpicker";
+import CalendarPicker from "@/pages/mentor/components/CalendarPicker";
 import { FaRegCalendar } from "react-icons/fa";
 
 type Mentee = {
@@ -497,7 +497,7 @@ export default function FeedbackPage() {
       <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
         <CalendarPicker
           selected={selectedDate}
-          onSelect={(d) => setSelectedDate(d)}
+          onSelect={(d: Date) => setSelectedDate(d)}
           onClose={() => setCalendarOpen(false)}
         />
       </ModalBase>
