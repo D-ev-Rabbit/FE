@@ -93,7 +93,11 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
     const imgSrc = useMemo(() => {
         if (!submission) return "";
         const raw = submission.files[activeImageIdx]?.url ?? "";
-        return (raw && blobUrlsByUrl[raw]) || raw;
+        const blobUrl = raw ? blobUrlsByUrl[raw] : "";
+        if (blobUrl) return blobUrl;
+        // API 경로(/api/...)는 브라우저가 Authorization 없이 요청해 401 되므로 img에 넣지 않음
+        if (raw && (raw.startsWith("/api/") || raw.startsWith("http"))) return "";
+        return raw;
     }, [submission, activeImageIdx, blobUrlsByUrl]);
 
     const activeFile = submission?.files[activeImageIdx];
