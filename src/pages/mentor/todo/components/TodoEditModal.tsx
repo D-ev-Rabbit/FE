@@ -46,9 +46,10 @@ export default function TodoEditModal({ open, mode, initial, files = [], onClose
   const canSave = title.trim().length > 0 && date.length === 10
 
   const openFilePicker = () => fileRef.current?.click()
-  const getFileLabel = (url: string) => {
+  const getFileLabel = (file: { url: string; name?: string }) => {
+    if (file.name?.trim()) return file.name;
     try {
-      const parts = url.split("/");
+      const parts = file.url.split("/");
       const last = parts[parts.length - 1] ?? "파일";
       return decodeURIComponent(last);
     } catch {
@@ -140,7 +141,7 @@ export default function TodoEditModal({ open, mode, initial, files = [], onClose
                   <ul className="space-y-1">
                     {files.map((file) => (
                       <li key={file.id} className="flex items-center justify-between gap-2">
-                        <span className="truncate">{getFileLabel(file.url)}</span>
+                        <span className="truncate">{getFileLabel(file)}</span>
                         <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
                           {file.type}
                         </span>

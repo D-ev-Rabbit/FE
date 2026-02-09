@@ -17,9 +17,11 @@ export default function SubjectSection({ section }: SubjectSectionProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {section.tasks.map((task) => (
-            <TaskRow key={task.id} task={task} />
-          ))}
+          {[...section.tasks]
+            .sort((a, b) => Number(a.status === "done") - Number(b.status === "done"))
+            .map((task) => (
+              <TaskRow key={task.id} task={task} />
+            ))}
         </div>
       )}
     </section>

@@ -8,7 +8,7 @@ interface TaskRowProps {
 
 const statusConfig = {
   done: {
-    label: "제출 완료",
+    label: "완료",
     className: "bg-emerald-100 text-emerald-600",
   },
   pending: {

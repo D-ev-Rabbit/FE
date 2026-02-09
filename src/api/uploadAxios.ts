@@ -5,7 +5,7 @@ const baseURL =
 
 export const uploadAxios = axios.create({
   baseURL,
-  withCredentials: false,
+  withCredentials: true,
 });
 uploadAxios.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");

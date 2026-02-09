@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   open: boolean;
@@ -32,7 +33,7 @@ export default function ModalBase({
 
   if (!open) return null;
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50">
       {/* backdrop */}
       <div
@@ -40,11 +41,12 @@ export default function ModalBase({
         onClick={() => (closeOnBackdrop ? onClose() : undefined)}
       />
       {/* content */}
-      <div className="absolute inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4">
-        <div className="w-full max-h-[85vh] overflow-y-auto sm:w-auto sm:max-h-none">
+      <div className="absolute left-1/2 top-1/2 w-screen -translate-x-1/2 -translate-y-1/2 px-4">
+        <div className="mx-auto w-full max-h-[85vh] overflow-y-auto sm:w-auto sm:max-h-none">
           {children}
         </div>
       </div>
     </div>
   );
+  return createPortal(modal, document.body);
 }

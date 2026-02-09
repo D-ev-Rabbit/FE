@@ -22,7 +22,8 @@ export type Submission = {
   menteeId?: number;
   files: {
     fileId: number;
-    url: string;
+    url: string; // 다운로드 API 경로: /api/files/{id}/download
+    name?: string;
     feedbacks?: { data?: string; feedbackId?: number }[];
-  }[]; // url or local
+  }[];
 };

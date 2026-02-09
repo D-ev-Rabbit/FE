@@ -335,6 +335,7 @@ export default function MentorTodoPage(){
           Number(selectedMenteeId),
           selectedDateStr
         );
+        if (cancelled) return;
 
         console.log("[getPlannerComment] status:", res.status);
         console.log("[getPlannerComment] data:", res.data);
@@ -342,6 +343,7 @@ export default function MentorTodoPage(){
         const comment = res.data?.comment;
         setPlannerComment(comment?.trim() ? comment : null);
       } catch (err: any) {
+        if (cancelled) return;
         console.log("[getPlannerComment] FAILED", {
           status: err?.response?.status,
           data: err?.response?.data,
@@ -349,7 +351,7 @@ export default function MentorTodoPage(){
         });
         setPlannerComment(null);
       } finally {
-        setIsLoadingComment(false);
+        if (!cancelled) setIsLoadingComment(false);
       }
     };
 

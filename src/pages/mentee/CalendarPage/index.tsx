@@ -209,6 +209,12 @@ export default function MenteeCalendarPage() {
       .catch(() => setStudySessions([]));
   }, [currentDateKey]);
 
+  const refreshStudySessions = () => {
+    menteeStudySessionApi.getByDate(currentDateKey)
+      .then((res) => setStudySessions(res.data))
+      .catch(() => setStudySessions([]));
+  };
+
   useEffect(() => {
     let ignore = false;
     const fetchWeek = async () => {
@@ -455,6 +461,7 @@ export default function MenteeCalendarPage() {
             setPickerMonth(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
             setDatePickerOpen(true);
           }}
+          onRefreshSessions={refreshStudySessions}
         />
         <DatePickerModal
           open={datePickerOpen}
@@ -531,7 +538,7 @@ export default function MenteeCalendarPage() {
           onOpenGoalActions={openGoalActions}
           onAddTask={openAddTask}
           onToggleSubject={toggleSubject}
-          onToggleTaskDone={toggleTaskDone}
+          onToggleTaskDone={handleToggleTodoDone}
           onOpenTaskActions={openTaskActions}
           getTasksForDate={getTasksForDate}
           onOpenTaskDetail={openTaskDetail}

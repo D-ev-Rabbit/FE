@@ -14,7 +14,7 @@ import type { MenteeTodo } from "@/types/planner";
 
 const statusConfig = {
   done: {
-    label: "제출 완료",
+    label: "완료",
     className: "bg-emerald-100 text-emerald-600",
   },
   pending: {
@@ -226,14 +226,22 @@ export default function MenteeTaskDetailPage() {
         setUploads(nextUploads);
       }
 
-      await patchMenteeTodo(task.id, {
-        title: task.title,
-        date: task.date,
-        subject: toApiSubject(task.subject),
-        goal: task.goal ?? "",
-        isCompleted: true,
-      });
-      setTask((prev) => (prev ? { ...prev, isCompleted: true } : prev));
+      let patchSucceeded = true;
+      try {
+        await patchMenteeTodo(task.id, {
+          title: task.title,
+          date: task.date,
+          subject: toApiSubject(task.subject),
+          goal: task.goal ?? "",
+          isCompleted: true,
+        });
+        setTask((prev) => (prev ? { ...prev, isCompleted: true } : prev));
+      } catch (error) {
+        const isForbidden =
+          axios.isAxiosError(error) && error.response?.status === 403;
+        if (!isForbidden) throw error;
+        patchSucceeded = false;
+      }
       setPendingUploads((prev) => {
         prev.forEach((p) => URL.revokeObjectURL(p.url));
         return [];
@@ -242,7 +250,9 @@ export default function MenteeTaskDetailPage() {
         open: true,
         variant: "success",
         title: "저장 완료",
-        description: "과제가 제출 완료로 저장되었습니다.",
+        description: patchSucceeded
+          ? "과제가 완료로 저장되었습니다."
+          : "제출 파일이 저장되었습니다.",
       });
     } catch (error) {
       const message = axios.isAxiosError(error)
@@ -365,9 +375,15 @@ export default function MenteeTaskDetailPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-gray-200 bg-white p-5 text-center text-sm text-gray-500 shadow-sm">
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 text-sm text-gray-600 shadow-sm">
           <div className="mb-3 text-left text-sm font-semibold text-gray-700">전반적인 피드백</div>
-          이곳에 멘토 피드백이 기록됩니다.
+          {feedbackOverall ? (
+            <div className="whitespace-pre-line text-gray-700">{feedbackOverall}</div>
+          ) : (
+            <div className="text-center text-sm text-gray-400">
+              이곳에 멘토 피드백이 기록됩니다.
+            </div>
+          )}
         </section>
 
         <div className="flex items-center justify-center gap-3 pt-2">
@@ -557,9 +573,7 @@ export default function MenteeTaskDetailPage() {
             <div className="mb-2 text-xs font-extrabold text-gray-800">멘토 피드백</div>
             {activePinId
               ? feedbackPins.find((pin) => pin.id === activePinId)?.text
-              : feedbackOverall
-                ? feedbackOverall
-                : "사진의 번호를 눌러 코멘트를 확인하세요."}
+              : "사진의 번호를 눌러 코멘트를 확인하세요."}
           </div>
         </div>
       </ModalBase>

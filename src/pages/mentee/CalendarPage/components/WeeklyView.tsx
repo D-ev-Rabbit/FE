@@ -58,12 +58,12 @@ export default function WeeklyView({
     weekStart.getMonth() + 1
   }/${weekStart.getDate()} - ${weekDays[6].getMonth() + 1}/${weekDays[6].getDate()}`;
   const formatStudyTimeCaps = (minutes: number) => {
-    if (minutes <= 0) return "0M";
+    if (minutes <= 0) return "0분";
     const hours = Math.floor(minutes / 60);
     const remain = minutes % 60;
-    if (hours === 0) return `${remain}M`;
-    if (remain === 0) return `${hours}H`;
-    return `${hours}H ${remain}M`;
+    if (hours === 0) return `${remain}분`;
+    if (remain === 0) return `${hours}시간`;
+    return `${hours}시간 ${remain}분`;
   };
 
   return (
@@ -210,7 +210,9 @@ export default function WeeklyView({
                       할 일이 없습니다.
                     </div>
                   ) : (
-                    subject.tasks.map((task) => (
+                    [...subject.tasks]
+                      .sort((a, b) => Number(a.done ?? false) - Number(b.done ?? false))
+                      .map((task) => (
                       <div
                         key={task.id}
                         className="flex items-center justify-between gap-2 text-sm"
