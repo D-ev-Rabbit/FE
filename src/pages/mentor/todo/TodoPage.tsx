@@ -212,7 +212,7 @@ export default function MentorTodoPage(){
       mentorTodoApi.createTodo(Number(selectedMenteeId), {
         title,
         date,
-        subject: subjectToApi(subject),
+        subject: subjectToApi(subject) ?? "KOREAN",
         goal: "",
         isCompleted: false,
       })
@@ -243,7 +243,7 @@ export default function MentorTodoPage(){
       mentorTodoApi.updateTodo(editingTodo.id, {
         title,
         date,
-        subject: subjectToApi(subject),
+        subject: subjectToApi(subject) ?? "KOREAN",
         goal: "",
         isCompleted: editingTodo.done,
       })

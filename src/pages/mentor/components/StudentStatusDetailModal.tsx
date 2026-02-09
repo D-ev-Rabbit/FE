@@ -30,7 +30,7 @@ type Props = {
 };
 
 type Metric = {
-  id: "studyTime" | "taskDone" | "feedbackChecked";
+  id: "studyTime" | "taskDone" | "pendingFeedback" | "feedbackCompleted" | "feedbackChecked";
   label: string;
   valueText: string;
   helpText: string;
@@ -213,6 +213,12 @@ export default function StudentStatusDetailModal({
     return `${Math.max(0, Math.min(100, pct))}%`;
   };
 
+  const formatCount = (current: number, total: number) => {
+    const c = Number.isFinite(current) ? Math.max(0, current) : 0;
+    const t = Number.isFinite(total) ? Math.max(0, total) : 0;
+    return `${c}/${t}`;
+  };
+
   const subjectLabel = (key: string): Subject => {
     if (key === "KOREAN") return "국어";
     if (key === "ENGLISH") return "영어";
@@ -245,9 +251,31 @@ export default function StudentStatusDetailModal({
             id: "taskDone",
             label: "멘토가 낸 과제 달성률",
             valueText: `${minTaskAchievementRate}%`,
-            helpText: "멘토가 낸 과제를 달성한 비율입니다.",
+            helpText: "해당 과목 전체 Todo 중 완료한 비율입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+                <FaCheckCircle size={18} />
+              </div>
+            ),
+          },
+          {
+            id: "pendingFeedback",
+            label: "제출 대기 과제",
+            valueText: "0/0",
+            helpText: "해당 과목에서 제출했지만 아직 피드백이 없는 과제 수입니다.",
+            icon: (
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-purple-100 text-purple-600">
+                <FaBookOpen size={18} />
+              </div>
+            ),
+          },
+          {
+            id: "feedbackCompleted",
+            label: "피드백 작성 완료",
+            valueText: "0/0",
+            helpText: "해당 과목에서 피드백이 달려 해결완료된 과제 수입니다.",
+            icon: (
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-100 text-blue-600">
                 <FaCheckCircle size={18} />
               </div>
             ),
@@ -256,7 +284,7 @@ export default function StudentStatusDetailModal({
             id: "feedbackChecked",
             label: "멘토 피드백 응답률",
             valueText: `${feedbackResponseRate}%`,
-            helpText: "멘토 피드백에 대해 확인/응답한 비율입니다.",
+            helpText: "멘토 피드백에 대해 멘티가 확인한 비율입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
                 <FaBookOpen size={18} />
@@ -290,9 +318,31 @@ export default function StudentStatusDetailModal({
             id: "taskDone",
             label: "멘토가 낸 과제 달성률",
             valueText: formatRate(metric?.todoCompletionRate ?? 0),
-            helpText: "멘토가 낸 과제를 달성한 비율입니다.",
+            helpText: "해당 과목 전체 Todo 중 완료한 비율입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+                <FaCheckCircle size={18} />
+              </div>
+            ),
+          },
+          {
+            id: "pendingFeedback",
+            label: "제출 대기 과제",
+            valueText: formatCount(metric?.pendingFeedbackTodoCount ?? 0, metric?.todoTotal ?? 0),
+            helpText: "해당 과목에서 제출했지만 아직 피드백이 없는 과제 수입니다.",
+            icon: (
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-purple-100 text-purple-600">
+                <FaBookOpen size={18} />
+              </div>
+            ),
+          },
+          {
+            id: "feedbackCompleted",
+            label: "피드백 작성 완료",
+            valueText: formatCount(metric?.feedbackCompletedTodoCount ?? 0, metric?.todoTotal ?? 0),
+            helpText: "해당 과목에서 피드백이 달려 해결완료된 과제 수입니다.",
+            icon: (
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-100 text-blue-600">
                 <FaCheckCircle size={18} />
               </div>
             ),
@@ -301,7 +351,7 @@ export default function StudentStatusDetailModal({
             id: "feedbackChecked",
             label: "멘토 피드백 응답률",
             valueText: formatRate(metric?.feedbackReadRate ?? 0),
-            helpText: "멘토 피드백에 대해 확인/응답한 비율입니다.",
+            helpText: "멘토 피드백에 대해 멘티가 확인한 비율입니다.",
             icon: (
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
                 <FaBookOpen size={18} />
@@ -342,9 +392,31 @@ export default function StudentStatusDetailModal({
               id: "taskDone",
               label: "멘토가 낸 과제 달성률",
               valueText: formatRate(metric?.todoCompletionRate ?? 0),
-              helpText: "멘토가 낸 과제를 달성한 비율입니다.",
+              helpText: "해당 과목 전체 Todo 중 완료한 비율입니다.",
               icon: (
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+                  <FaCheckCircle size={18} />
+                </div>
+              ),
+            },
+            {
+              id: "pendingFeedback",
+              label: "제출 대기 과제",
+              valueText: formatCount(metric?.pendingFeedbackTodoCount ?? 0, metric?.todoTotal ?? 0),
+              helpText: "해당 과목에서 제출했지만 아직 피드백이 없는 과제 수입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-purple-100 text-purple-600">
+                  <FaBookOpen size={18} />
+                </div>
+              ),
+            },
+            {
+              id: "feedbackCompleted",
+              label: "피드백 작성 완료",
+              valueText: formatCount(metric?.feedbackCompletedTodoCount ?? 0, metric?.todoTotal ?? 0),
+              helpText: "해당 과목에서 피드백이 달려 해결완료된 과제 수입니다.",
+              icon: (
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-100 text-blue-600">
                   <FaCheckCircle size={18} />
                 </div>
               ),
@@ -353,7 +425,7 @@ export default function StudentStatusDetailModal({
               id: "feedbackChecked",
               label: "멘토 피드백 응답률",
               valueText: formatRate(metric?.feedbackReadRate ?? 0),
-              helpText: "멘토 피드백에 대해 확인/응답한 비율입니다.",
+              helpText: "멘토 피드백에 대해 멘티가 확인한 비율입니다.",
               icon: (
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
                   <FaBookOpen size={18} />

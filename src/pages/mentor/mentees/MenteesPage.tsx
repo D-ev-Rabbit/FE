@@ -80,9 +80,20 @@ export default function MenteesPage() {
         acc.todoCompleted += cur.todoCompleted ?? 0;
         acc.feedbackTotal += cur.feedbackTotal ?? 0;
         acc.feedbackRead += cur.feedbackRead ?? 0;
+        acc.submittedFileCount += cur.submittedFileCount ?? 0;
+        acc.pendingFeedbackTodoCount += cur.pendingFeedbackTodoCount ?? 0;
+        acc.feedbackCompletedTodoCount += cur.feedbackCompletedTodoCount ?? 0;
         return acc;
       },
-      { todoTotal: 0, todoCompleted: 0, feedbackTotal: 0, feedbackRead: 0 }
+      {
+        todoTotal: 0,
+        todoCompleted: 0,
+        feedbackTotal: 0,
+        feedbackRead: 0,
+        submittedFileCount: 0,
+        pendingFeedbackTodoCount: 0,
+        feedbackCompletedTodoCount: 0,
+      }
     );
   }, [summary]);
 
@@ -297,20 +308,23 @@ export default function MenteesPage() {
                           total: aggregated.todoTotal,
                           barClassName: "bg-green-500",
                           trackClassName: "bg-green-100",
+                          useRatioColor: true,
                         },
                         {
                           label: "제출파일",
-                          current: aggregated.feedbackRead,
-                          total: aggregated.feedbackTotal,
+                          current: aggregated.pendingFeedbackTodoCount,
+                          total: aggregated.todoTotal,
                           barClassName: "bg-purple-500",
                           trackClassName: "bg-purple-100",
+                          useRatioColor: true,
                         },
                         {
                           label: "피드백 작성 완료",
-                          current: aggregated.feedbackRead,
-                          total: aggregated.feedbackTotal,
+                          current: aggregated.feedbackCompletedTodoCount,
+                          total: aggregated.todoTotal,
                           barClassName: "bg-blue-500",
                           trackClassName: "bg-blue-100",
+                          useRatioColor: true,
                         },
                       ]}
                       onClick={() => setStatusModalOpen(true)}
@@ -343,14 +357,10 @@ export default function MenteesPage() {
                   iconLeft={<FaPen className="h-4 w-4" />}
                 />
               </div>
-            </aside> 
+            </aside>
           </div>
         </aside>
       </div>
-
-     
-    
-
     </div>
   );
 }
