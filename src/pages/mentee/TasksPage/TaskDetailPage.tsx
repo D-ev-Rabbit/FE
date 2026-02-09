@@ -255,6 +255,9 @@ export default function MenteeTaskDetailPage() {
         const uploaded = results.map((r) => ({
           id: r.data.id,
           url: normalizeFileUrl(r.data.url),
+          type: r.data.type?.toLowerCase(),
+          name: r.data.name,
+          originalIndex: -1,
         }));
         nextUploads = [...uploads, ...uploaded];
         setUploads(nextUploads);
