@@ -8,7 +8,6 @@ import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee, MentorMenteeSummary } from "@/types/mentor";
 import { mentorSummaryApi } from "@/api/mentor/summary";
 import { MentorDashboard } from "@/pages/mentor/dashboard";
-import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
 import ActionCard from "../components/ActionCard";
 import { cn } from "@/shared/lib/cn";
 
@@ -21,7 +20,6 @@ export default function MenteesPage() {
 
   const [mentees, setMentees] = useState<MentorMentee[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [summary, setSummary] = useState<MentorMenteeSummary | null>(null);
   const [pcPage, setPcPage] = useState(0);
   const pcPerPage = 5;
@@ -304,28 +302,16 @@ export default function MenteesPage() {
                 <div className="mb-1 text-sm font-extrabold text-gray-900">현황</div>
                 <p className="mb-4 text-xs text-gray-500">멘토링 과제 수행률을 한눈에 확인하세요</p>
                 {selectedStudent ? (
-                  <>
-                    <MentorDashboard
-                      metrics={{
-                        total: aggregated.todoTotal,
-                        submittedCount:
-                          (aggregated.pendingFeedbackTodoCount ?? 0) +
-                          (aggregated.feedbackCompletedTodoCount ?? 0),
-                        feedbackWrittenCount: aggregated.feedbackCompletedTodoCount ?? 0,
-                        feedbackConfirmedCount: aggregated.feedbackRead ?? 0,
-                      }}
-                      onClick={() => setStatusModalOpen(true)}
-                    />
-
-                    <ModalBase open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
-                      <StudentStatusDetailModal
-                        studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                        open={statusModalOpen}
-                        onClose={() => setStatusModalOpen(false)}
-                        summary={summary}
-                      />
-                    </ModalBase>
-                  </>
+                  <MentorDashboard
+                    metrics={{
+                      total: aggregated.todoTotal,
+                      submittedCount:
+                        (aggregated.pendingFeedbackTodoCount ?? 0) +
+                        (aggregated.feedbackCompletedTodoCount ?? 0),
+                      feedbackWrittenCount: aggregated.feedbackCompletedTodoCount ?? 0,
+                      feedbackConfirmedCount: aggregated.feedbackRead ?? 0,
+                    }}
+                  />
                 ) : (
                   <p className="p-4 text-sm text-muted-foreground">위에서 멘티를 선택하세요.</p>
                 )}
