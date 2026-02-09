@@ -23,7 +23,8 @@ export const buildMonthGrid = (date: Date): MonthCell[] => {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
   const today = new Date();
-  const totalCells = 42;
+  const weeksInMonth = Math.ceil((firstDay + daysInMonth) / 7);
+  const totalCells = weeksInMonth * 7;
 
   return Array.from({ length: totalCells }, (_, index) => {
     const dayIndex = index - firstDay + 1;
