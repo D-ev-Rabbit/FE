@@ -58,6 +58,7 @@ export default function MenteeTasksPage() {
         id: todo.id,
         title: todo.title,
         status: todo.isCompleted ? "done" : "pending",
+        isMine: todo.isMine,
       });
     });
 

@@ -32,6 +32,7 @@ export type MenteeTodo = {
   subject: string;
   goal?: string;
   isCompleted: boolean;
+  isMine?: boolean;
   comment?: string;
   files?: {
     fileId: number;
@@ -54,6 +55,7 @@ export type SubjectGroup = {
     done: boolean;
     time: string;
     dateKey: string;
+    isMine?: boolean;
   }[];
 };
 

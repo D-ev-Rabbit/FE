@@ -237,23 +237,30 @@ export default function DailyView({
                             type="button"
                             onClick={() => onOpenTaskDetail(String(task.id))}
                             className={cn(
-                              "bg-transparent p-0 text-left",
+                              "flex items-center gap-2 bg-transparent p-0 text-left",
                               task.done ? "text-gray-400 line-through" : "text-gray-900"
                             )}
                             aria-label={`${task.title} 상세보기`}
                           >
                             {task.title}
+                            {task.isMine === false && (
+                              <span className="rounded-full bg-amber-100 px-1.5 py-0 text-[9px] font-semibold text-amber-700">
+                                멘토
+                              </span>
+                            )}
                           </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => onOpenTaskActions(subject.id, task)}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 p-0 text-gray-500 shadow-none"
-                          aria-label={`${task.title} 관리`}
-                        >
-                          <HiOutlineEllipsisHorizontal className="h-4 w-4 text-gray-500" />
-                        </button>
+                        {task.isMine !== false && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenTaskActions(subject.id, task)}
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 p-0 text-gray-500 shadow-none"
+                            aria-label={`${task.title} 관리`}
+                          >
+                            <HiOutlineEllipsisHorizontal className="h-4 w-4 text-gray-500" />
+                          </button>
+                        )}
                       </div>
                     ))
                   )}
