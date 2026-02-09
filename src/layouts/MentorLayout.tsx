@@ -84,7 +84,7 @@ export default function MentorLayout() {
               </div>
             </header>
 
-            <main className="min-h-0 overflow-y-auto h-full">
+            <main className="min-h-0 overflow-y-auto ">
               <div className="w-full rounded-3xl bg-white p-6 sm:p-8 mr-0 lg:mr-3">
                 <Outlet />
               </div>

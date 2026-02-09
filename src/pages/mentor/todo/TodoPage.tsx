@@ -488,7 +488,7 @@ export default function MentorTodoPage(){
           {/* TodoList Table */}
           <section className="w-full min-w-0 flex-1">
             {/* 과목필터 & 플래너 피드백 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 max-w-[900px]">
               <SubjectFilter value={subject} onChange={setSubject}/>
               <button
                 type="button"
@@ -500,6 +500,27 @@ export default function MentorTodoPage(){
               
                 
               </button>
+            </div>
+            <div className="p-4 w-full ">
+              <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm max-w-[880px]">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-gray-900">플래너 피드백</div>
+                  <div className="text-xs text-gray-400">
+                    {isLoadingComment ? "불러오는 중..." : hasPlannerComment ? "작성됨" : "미작성"}
+                  </div>
+                </div>
+
+                <div className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
+                  {isLoadingComment ? (
+                    <span className="text-gray-400">불러오는 중...</span>
+                  ) : hasPlannerComment ? (
+                    plannerComment
+                  ) : (
+                    <span className="text-gray-400">아직 작성된 피드백이 없어요.</span>
+                  )}
+                </div>
+
+              </div>
             </div>
             <div className="w-full max-w-[900px] bg-white p-4">
               <div className="flex items-center justify-between pb-3">
