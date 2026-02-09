@@ -14,7 +14,7 @@ import { cn } from "@/shared/lib/cn";
 
 import MenteeList from "../components/MenteeList";
 import type { MenteeRowData } from "../components/MenteeRow";
-import CalendarPopover from "../components/CalendarPopover";
+import CalendarPicker from "../components/CalendarPicker";
 
 export default function MenteesPage() {
   const navigate = useNavigate();
@@ -117,7 +117,7 @@ export default function MenteesPage() {
         <div className="mt-2 text-sm text-gray-500">멘티별 현황을 확인 할 수 있어요.</div>
       </div>
 
-      <div className="grid items-start gap-8 lg:gap-12 lg:grid-cols-2">
+      <div className="grid items-start gap-8 lg:gap-12 [grid-template-columns:repeat(auto-fit,minmax(720px,1fr))]">
         <section className="w-full space-y-4">
           <div className="flex items-center justify-between">
             <div className="text-sm font-extrabold text-gray-900">멘티 목록</div>
@@ -172,7 +172,7 @@ export default function MenteesPage() {
               </button>
             </div>
           </div>
-          <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm  shrink-0 min-w-[600px]">
             <div className="grid grid-cols-2 gap-3 lg:hidden">
               {mentees.map((m) => (
                 <button
@@ -258,20 +258,13 @@ export default function MenteesPage() {
 
             {/* 캘린더 팝업 */}
             {calendarOpen && (
-
               <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
-                <div className="relative">
-                  <CalendarPopover
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      setSelectedDate(date);
-                      setCalendarOpen(false);
-                    }}
-                    onClose={() => setCalendarOpen(false)}
-                  />
-                </div>
+                <CalendarPicker
+                  selected={selectedDate}
+                  onSelect={(d) => setSelectedDate(d)}
+                  onClose={() => setCalendarOpen(false)} // 날짜 선택하면 닫기
+                />
               </ModalBase>
-
             )}
           </div>
 
