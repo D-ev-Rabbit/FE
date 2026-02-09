@@ -20,6 +20,8 @@ export type Submission = {
   goal?: string;
   isCompleted?: boolean;
   menteeId?: number;
+  /** 목록에서 표시용: 멘티가 올린 파일(이미지) 개수 */
+  fileCount?: number;
   files: {
     fileId: number;
     url: string; // 다운로드 API 경로: /api/files/{id}/download

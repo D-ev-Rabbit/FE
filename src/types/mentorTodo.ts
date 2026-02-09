@@ -8,6 +8,8 @@ export type MentorTodo = {
   goal?: string;
   isCompleted: boolean;
   comment?: string;
+  /** 해당 과제에 멘티가 올린 파일(이미지) 개수 */
+  fileCount?: number;
 };
 
 export type MentorTodoCreateBody = {
