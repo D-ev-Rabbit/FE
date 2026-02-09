@@ -10,7 +10,7 @@ import ActionCard from "./components/ActionCard";
 
 import MenteeList from "./components/MenteeList";
 import type { MenteeRowData } from "./components/MenteeRow";
-import CalendarPopover from "./components/CalendarPopover";
+import calendarpicker from "./components/calendarpicker";
 import SubjectFilter, { type Subject } from "./components/subjectFilter"
 import { TaskCard } from "./components/TaskCard";
 import { mentorTodoApi } from "@/api/mentor/todo";
@@ -189,17 +189,13 @@ export default function MentorTasksPage() {
                 
                 {/* 캘린더 팝업 */}
                 {calendarOpen && (
-                  
                   <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
-                    <div className="relative">
-                      <CalendarPopover
-                        selected={selectedDate}
-                        onSelect={handleDateSelect}
-                        onClose={() => setCalendarOpen(false)}
-                      />
-                    </div>
+                    <CalendarPicker
+                      selected={selectedDate}
+                      onSelect={(d) => setSelectedDate(d)}
+                      onClose={() => setCalendarOpen(false)}
+                    />
                   </ModalBase>
-                  
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
