@@ -297,8 +297,8 @@ export default function FeedbackPage() {
                     <div className="flex items-center gap-2">
                       {[
                         { key: "ALL", label: "전체" },
-                        { key: "COMPLETED", label: "해결완료" },
-                        { key: "INCOMPLETE", label: "미완료" },
+                        { key: "COMPLETED", label: "피드백 완료" },
+                        { key: "INCOMPLETE", label: "피드백 대기" },
                       ].map((item) => {
                         const active = statusFilter === item.key;
                         return (
