@@ -122,14 +122,19 @@ export default function MobileHeader({
           {/* Logo */}
           <div className="flex items-center gap-3">
             {showLogo && (
-              <>
+              <button
+                type="button"
+                onClick={() => navigate("/mentee/calendar")}
+                className="flex items-center gap-3 border-0 bg-transparent p-0 outline-none focus:outline-none focus-visible:outline-none"
+                aria-label="멘티 일일 플래너로 이동"
+              >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-white text-sm">
                   ✦
                 </div>
                 <div className="text-base font-extrabold tracking-wide text-violet-600">
                   설스터디
                 </div>
-              </>
+              </button>
             )}
           </div>
 

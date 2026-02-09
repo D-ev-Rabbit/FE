@@ -4,6 +4,7 @@ export type TaskItem = {
   id: number;
   title: string;
   status: TaskStatus;
+  isMine?: boolean;
 };
 
 export type SubjectSection = {

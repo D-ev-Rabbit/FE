@@ -497,7 +497,7 @@ export default function FeedbackPage() {
       <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
         <CalendarPicker
           selected={selectedDate}
-          onSelect={(d) => setSelectedDate(d)}
+          onSelect={(d: Date) => setSelectedDate(d)}
           onClose={() => setCalendarOpen(false)}
         />
       </ModalBase>

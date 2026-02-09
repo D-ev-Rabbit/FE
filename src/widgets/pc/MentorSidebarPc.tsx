@@ -32,14 +32,19 @@ export default function MentorSidebarPc() {
   return (
     <>
       <aside className="flex h-full w-54 flex-col rounded-3xl bg-white p-5">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate("/mentor/home")}
+          className="flex items-center gap-3 border-0 bg-transparent p-0 outline-none focus:outline-none focus-visible:outline-none"
+          aria-label="멘토 홈으로 이동"
+        >
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-white">
             ✦
           </div>
           <div className="text-base font-bold tracking-wide text-violet-600">
             설스터디
           </div>
-        </div>
+        </button>
 
         <nav className="mt-10 flex flex-col gap-1">
           {items.map((it) => (

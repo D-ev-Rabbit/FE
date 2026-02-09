@@ -425,6 +425,7 @@ export default function MenteeCalendarPage() {
         done: todo.isCompleted,
         time: "0m",
         dateKey: todo.date,
+        isMine: todo.isMine,
       });
     }
 
