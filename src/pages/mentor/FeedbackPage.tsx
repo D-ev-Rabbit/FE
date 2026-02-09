@@ -11,7 +11,7 @@ import { getMenteeTodo } from "@/api/mentee/todo";
 import type { MentorTodo } from "@/types/mentorTodo";
 import SubjectFilter, { type Subject as TodoSubject } from "@/pages/mentor/components/subjectFilter";
 import ModalBase from "@/shared/ui/modal/ModalBase";
-import CalendarPopover from "@/pages/mentor/components/CalendarPopover";
+import calendarpicker from "@/pages/mentor/components/calendarpicker";
 import { FaRegCalendar } from "react-icons/fa";
 
 type Mentee = {
@@ -500,16 +500,11 @@ export default function FeedbackPage() {
         </section>
 
       <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
-        <div className="relative">
-          <CalendarPopover
-            selected={selectedDate}
-            onSelect={(date) => {
-              setSelectedDate(date);
-              setCalendarOpen(false);
-            }}
-            onClose={() => setCalendarOpen(false)}
-          />
-        </div>
+        <CalendarPicker
+          selected={selectedDate}
+          onSelect={(d) => setSelectedDate(d)}
+          onClose={() => setCalendarOpen(false)}
+        />
       </ModalBase>
 
       <FeedbackModal
