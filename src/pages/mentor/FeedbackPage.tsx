@@ -7,7 +7,6 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee } from "@/types/mentor";
 import { mentorTodoApi } from "@/api/mentor/todo";
-import { getMenteeTodo } from "@/api/mentee/todo";
 import type { MentorTodo } from "@/types/mentorTodo";
 import SubjectFilter, { type Subject as TodoSubject } from "@/pages/mentor/components/subjectFilter";
 import ModalBase from "@/shared/ui/modal/ModalBase";
@@ -397,31 +396,27 @@ export default function FeedbackPage() {
                               key={`${s.id}-${s.submittedAt}-${idx}`}
                               type="button"
                               onClick={() => {
-                                Promise.allSettled([
-                                  mentorTodoApi.getTodo(Number(s.id)),
-                                  getMenteeTodo(Number(s.id)),
-                                ])
-                                  .then(([mentorRes, menteeRes]) => {
-                                    const mentorDetail =
-                                      mentorRes.status === "fulfilled" ? (mentorRes.value.data as any) : null;
-                                    const menteeDetail =
-                                      menteeRes.status === "fulfilled" ? (menteeRes.value.data as any) : null;
-                                    const detail = mentorDetail ?? menteeDetail ?? {};
-                                    const filesSource = menteeDetail?.files ?? detail.files ?? [];
+                                mentorTodoApi
+                                  .getTodo(Number(s.id))
+                                  .then((res) => {
+                                    const detail = res.data as any;
+                                    const filesSource = detail?.files ?? [];
                                     const files = (filesSource ?? [])
                                       .map((f: any) => ({
                                         fileId: f.fileId ?? f.id,
                                         url: f.url,
+                                        type: f.type,
+                                        name: f.name,
                                         feedbacks: f.feedbacks ?? [],
                                       }))
                                       .filter((f: any) => Boolean(f.url) && Boolean(f.fileId));
                                     setSelectedSubmission({
                                       ...s,
-                                      subject: toSubject(detail.subject ?? s.subject),
-                                      submittedAt: detail.date ?? s.submittedAt,
-                                      title: detail.title ?? s.title,
-                                      goal: detail.goal ?? s.goal,
-                                      isCompleted: detail.isCompleted ?? s.isCompleted,
+                                      subject: toSubject(detail?.subject ?? s.subject),
+                                      submittedAt: detail?.date ?? s.submittedAt,
+                                      title: detail?.title ?? s.title,
+                                      goal: detail?.goal ?? s.goal,
+                                      isCompleted: detail?.isCompleted ?? s.isCompleted,
                                       files,
                                     });
                                   })

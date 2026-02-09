@@ -36,8 +36,10 @@ export type MenteeTodo = {
   files?: {
     fileId: number;
     url: string;
-    type: string;
-    version: string | null;
+    type?: string;
+    name?: string;
+    creatorId?: number;
+    version?: string | null;
     feedbacks: unknown[];
   }[];
 };

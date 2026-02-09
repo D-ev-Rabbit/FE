@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiDownload, FiChevronLeft, FiEye, FiEyeOff, FiTrash2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
@@ -35,7 +35,8 @@ export default function MenteeTaskDetailPage() {
   const [activePinId, setActivePinId] = useState<number | null>(null);
   const [showPins, setShowPins] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [uploads, setUploads] = useState<Array<{ id: number; url: string }>>([]);
+  const [uploads, setUploads] = useState<Array<{ id: number; url: string; type?: string; name?: string; fileIndex: number }>>([]);
+  const [blobUrlsByUrl, setBlobUrlsByUrl] = useState<Record<string, string>>({});
   const [pendingUploads, setPendingUploads] = useState<Array<{ id: string; url: string; file: File }>>([]);
   const [feedbackPinsByImage, setFeedbackPinsByImage] = useState<Record<number, { id: number; x: number; y: number; text: string }[]>>({});
   const [feedbackOverall, setFeedbackOverall] = useState("");
@@ -74,22 +75,64 @@ export default function MenteeTaskDetailPage() {
     return raw;
   };
 
+  // 학습 점검하기 = 멘티가 올린 파일만 (creatorId === menteeId)
   useEffect(() => {
-    if (!task?.files) {
+    if (!task?.files || task.menteeId == null) {
       setUploads([]);
       return;
     }
-    const next = task.files
-      .map((f) => ({
+    const menteeOnly = task.files
+      .map((f, fileIndex) => ({ f, fileIndex }))
+      .filter(({ f }) => f.creatorId === task.menteeId);
+    const next = menteeOnly
+      .map(({ f, fileIndex }) => ({
         id: f.fileId,
-        url: normalizeFileUrl(f.url),
+        url: normalizeFileUrl(f.url ?? ""),
+        type: f.type,
+        name: f.name,
+        fileIndex,
       }))
-      .filter((f) => f.url);
+      .filter((u) => u.url);
     setUploads(next);
-    if (activeImageIndex >= next.length) {
-      setActiveImageIndex(Math.max(0, next.length - 1));
+    setActiveImageIndex((prev) => (prev >= next.length ? Math.max(0, next.length - 1) : prev));
+  }, [task?.files, task?.menteeId]);
+
+  const isPdf = (u: { type?: string; name?: string }) =>
+    u.type?.toLowerCase() === "pdf" || String(u.name ?? "").toLowerCase().endsWith(".pdf");
+  /** 학습 점검하기 = 멘티 파일 중 이미지만 (PDF 제외) */
+  const uploadsForGrid = uploads.filter((u) => !isPdf(u));
+
+  /** 과제 다운로드용 = 멘토가 올린 파일만 */
+  const mentorFiles = useMemo(() => {
+    if (!task?.files || task.menteeId == null) return [];
+    return task.files.filter((f) => f.creatorId != null && f.creatorId !== task.menteeId);
+  }, [task?.files, task?.menteeId]);
+
+  // Bearer로 파일 fetch → blob URL (그리드에 보이는 이미지만)
+  useEffect(() => {
+    if (!uploadsForGrid.length) {
+      setBlobUrlsByUrl({});
+      return;
     }
-  }, [task, activeImageIndex]);
+    let revoked = false;
+    uploadsForGrid.forEach((u) => {
+      fileApi
+        .fetchFileBlob(u.url)
+        .then((blob) => {
+          if (revoked) return;
+          const blobUrl = URL.createObjectURL(blob);
+          setBlobUrlsByUrl((prev) => ({ ...prev, [u.url]: blobUrl }));
+        })
+        .catch(() => {});
+    });
+    return () => {
+      revoked = true;
+      setBlobUrlsByUrl((prev) => {
+        Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+        return {};
+      });
+    };
+  }, [uploadsForGrid.map((u) => u.url).join(",")]);
 
   useEffect(() => {
     if (!task?.files || task.files.length === 0) {
@@ -221,6 +264,9 @@ export default function MenteeTaskDetailPage() {
         const uploaded = results.map((r) => ({
           id: r.data.id,
           url: normalizeFileUrl(r.data.url),
+          type: r.data.type?.toLowerCase(),
+          name: r.data.name,
+          fileIndex: -1,
         }));
         nextUploads = [...uploads, ...uploaded];
         setUploads(nextUploads);
@@ -268,8 +314,45 @@ export default function MenteeTaskDetailPage() {
       setIsSavingTask(false);
     }
   };
-  const activeIsPending = activeImageIndex >= uploads.length;
-  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeImageIndex] ?? [];
+  const displayList = [
+    ...uploadsForGrid.map((u) => ({ ...u, pending: false as const })),
+    ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const })),
+  ];
+  const activeItem = displayList[activeImageIndex];
+  const activeIsPending = activeItem && "pending" in activeItem && activeItem.pending;
+  const activeFileIndex = activeItem && !("pending" in activeItem && activeItem.pending) && "fileIndex" in activeItem ? (activeItem as { fileIndex: number }).fileIndex : -1;
+  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeFileIndex] ?? [];
+
+  const handleAssignmentDownload = () => {
+    const firstPdf = mentorFiles.find((f) => isPdf(f));
+    const first = firstPdf ?? mentorFiles[0];
+    if (!first) return;
+    const url = normalizeFileUrl(first.url ?? "");
+    if (!url) return;
+    fileApi
+      .fetchFileBlob(url)
+      .then((blob) => {
+        const u = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = u;
+        a.download = first.name || `${task?.title ?? "과제"}.pdf`;
+        a.click();
+        URL.revokeObjectURL(u);
+      })
+      .catch(() => {});
+  };
+
+  const activeDisplayUrl = activeItem && !("pending" in activeItem && activeItem.pending) && "id" in activeItem && typeof activeItem.id === "number"
+    ? blobUrlsByUrl[(activeItem as { url: string }).url] ?? (activeItem as { url: string }).url
+    : activeItem && "url" in activeItem
+      ? (activeItem as { url: string }).url
+      : "";
+  const isActivePdf =
+    activeItem &&
+    !("pending" in activeItem && activeItem.pending) &&
+    "type" in activeItem &&
+    ((activeItem as { type?: string }).type?.toLowerCase() === "pdf" ||
+      String((activeItem as { name?: string }).name ?? "").toLowerCase().endsWith(".pdf"));
 
   return (
     <>
@@ -291,7 +374,9 @@ export default function MenteeTaskDetailPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-500"
+                onClick={handleAssignmentDownload}
+                disabled={mentorFiles.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-500 disabled:opacity-50"
               >
                 <FiDownload size={12} />
                 과제 다운로드(PDF)
@@ -323,36 +408,47 @@ export default function MenteeTaskDetailPage() {
           </div>
           <div className="mt-2 flex flex-col items-center gap-3 text-center text-sm text-gray-500">
             <div className="grid w-full grid-cols-3 gap-3 pt-2">
-              {[...uploads, ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const }))].map((upload, index) => {
-                const hasImage = !!upload;
+              {displayList.map((upload, index) => {
+                const isPending = "pending" in upload && upload.pending;
+                const isPdf =
+                  !isPending &&
+                  "type" in upload &&
+                  ((upload as { type?: string }).type?.toLowerCase() === "pdf" ||
+                    String((upload as { name?: string }).name ?? "").toLowerCase().endsWith(".pdf"));
+                const thumbSrc = isPending ? (upload as { url: string }).url : blobUrlsByUrl[(upload as { url: string }).url] ?? (upload as { url: string }).url;
                 return (
                   <button
-                    key={`upload-${upload.id}`}
+                    key={isPending ? `pending-${upload.id}` : `file-${(upload as { id: number }).id}`}
                     type="button"
                     onClick={() => {
-                      if (!hasImage) return;
                       setActivePinId(null);
                       setActiveImageIndex(index);
                       setDetailOpen(true);
                     }}
                     className={cn(
                       "btn-none aspect-[3/4] w-full overflow-hidden bg-transparent p-0 outline-none focus:outline-none focus-visible:outline-none",
-                      hasImage ? "cursor-pointer" : "cursor-default"
+                      "cursor-pointer"
                     )}
-                    aria-label={hasImage ? "업로드된 사진 보기" : "빈 슬롯"}
+                    aria-label={isPdf ? "PDF 보기" : "파일 보기"}
                   >
-                    {hasImage ? (
-                      <div className="relative h-full w-full">
+                    <div className="relative h-full w-full">
+                      {isPdf ? (
+                        <div className="flex h-full w-full items-center justify-center rounded-lg border border-gray-200 bg-red-50 text-xs font-semibold text-red-600">
+                          PDF
+                        </div>
+                      ) : (
                         <img
-                          src={upload.url}
-                          alt="업로드 이미지"
-                          className="h-full w-full object-contain bg-white border"
+                          src={thumbSrc}
+                          alt={isPdf ? "PDF" : "업로드 이미지"}
+                          className="h-full w-full object-contain border border-gray-200 bg-white"
                         />
-                        {"pending" in upload && (
+                      )}
+                      {isPending && (
+                        <>
                           <button
                             type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
+                            onClick={(e) => {
+                              e.stopPropagation();
                               handleDeletePending(upload.id as string);
                             }}
                             className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-white/90 text-gray-700"
@@ -360,14 +456,12 @@ export default function MenteeTaskDetailPage() {
                           >
                             <FiTrash2 size={12} />
                           </button>
-                        )}
-                        {"pending" in upload && (
                           <span className="absolute left-1 top-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                             임시
                           </span>
-                        )}
-                      </div>
-                    ) : null}
+                        </>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -472,25 +566,17 @@ export default function MenteeTaskDetailPage() {
               과제로 돌아가기
             </button>
             <div className="flex items-center gap-2">
-              {(() => {
-                const list = [
-                  ...uploads,
-                  ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const })),
-                ] as Array<{ id: number | string; url: string; pending?: true }>;
-                const current = list[activeImageIndex];
-                if (!current || !("pending" in current)) return null;
-                return (
+              {activeItem && "pending" in activeItem && activeItem.pending ? (
                   <button
                     type="button"
-                    onClick={() => handleDeletePending(current.id as string)}
+                    onClick={() => handleDeletePending(activeItem.id as string)}
                     className="flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm"
                     aria-label="임시 업로드 삭제"
                     title="삭제"
                   >
                     <FiTrash2 size={16} className="text-gray-700" />
                   </button>
-                );
-              })()}
+              ) : null}
               <button
                 type="button"
                 onClick={() => setShowPins((prev) => !prev)}
@@ -508,12 +594,21 @@ export default function MenteeTaskDetailPage() {
           </div>
           <div className="mt-3 overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-3">
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gray-100">
-              {([...uploads, ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const }))] as Array<{ id: number | string; url: string; pending?: true }>)[activeImageIndex] ? (
-                <img
-                  src={([...uploads, ...pendingUploads.map((p) => ({ id: p.id, url: p.url, pending: true as const }))] as Array<{ id: number | string; url: string; pending?: true }>)[activeImageIndex].url}
-                  alt="상세 피드백 이미지"
-                  className="absolute inset-0 h-full w-full object-contain bg-white"
-                />
+              {activeItem && activeDisplayUrl ? (
+                isActivePdf ? (
+                  <embed
+                    src={activeDisplayUrl}
+                    type="application/pdf"
+                    className="absolute inset-0 h-full w-full"
+                    title={(activeItem as { name?: string }).name ?? "PDF"}
+                  />
+                ) : (
+                  <img
+                    src={activeDisplayUrl}
+                    alt="상세 피드백 이미지"
+                    className="absolute inset-0 h-full w-full object-contain bg-white"
+                  />
+                )
               ) : (
                 <div
                   className="absolute inset-0"
