@@ -7,8 +7,7 @@ import { HiOutlineUser } from "react-icons/hi";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee, MentorMenteeSummary } from "@/types/mentor";
 import { mentorSummaryApi } from "@/api/mentor/summary";
-import StudentStatusCard from "@/pages/mentor/components/StudentStatusCard";
-import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
+import { MentorDashboard } from "@/pages/mentor/dashboard";
 import ActionCard from "../components/ActionCard";
 import { cn } from "@/shared/lib/cn";
 
@@ -21,7 +20,6 @@ export default function MenteesPage() {
 
   const [mentees, setMentees] = useState<MentorMentee[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [summary, setSummary] = useState<MentorMenteeSummary | null>(null);
   const [pcPage, setPcPage] = useState(0);
   const pcPerPage = 5;
@@ -51,6 +49,14 @@ export default function MenteesPage() {
     return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
   }, [selectedMenteeId, mentees]);
 
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const selectedDateStr = useMemo(() => {
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const d = String(selectedDate.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [selectedDate]);
+
   useEffect(() => {
     if (!selectedMenteeId) {
       setSummary(null);
@@ -58,7 +64,7 @@ export default function MenteesPage() {
     }
     let ignore = false;
     mentorSummaryApi
-      .getMenteeSummary(Number(selectedMenteeId))
+      .getMenteeSummary(Number(selectedMenteeId), selectedDateStr)
       .then((res) => {
         if (ignore) return;
         setSummary(res.data);
@@ -70,7 +76,7 @@ export default function MenteesPage() {
     return () => {
       ignore = true;
     };
-  }, [selectedMenteeId]);
+  }, [selectedMenteeId, selectedDateStr]);
 
   const aggregated = useMemo(() => {
     const subjects = summary?.subjects ?? {};
@@ -101,8 +107,6 @@ export default function MenteesPage() {
     setSelectedMenteeId(row.id);
   };
 
-  // 캘린더
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   
 
@@ -293,52 +297,21 @@ export default function MenteesPage() {
                 )}
               </div>
 
-              {/* 현황 카드 */}
+              {/* 현황 카드 (해당 일자별) */}
               <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm lg:w-[560px]">
-                <div className="text-sm font-extrabold text-gray-900 p-4">현황</div>
+                <div className="mb-1 text-sm font-extrabold text-gray-900">현황</div>
+                <p className="mb-4 text-xs text-gray-500">멘토링 과제 수행률을 한눈에 확인하세요</p>
                 {selectedStudent ? (
-                  <>
-                    <StudentStatusCard
-                      studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                      periodLabel="Today"
-                      items={[
-                        {
-                          label: "To do",
-                          current: aggregated.todoCompleted,
-                          total: aggregated.todoTotal,
-                          barClassName: "bg-green-500",
-                          trackClassName: "bg-green-100",
-                          useRatioColor: true,
-                        },
-                        {
-                          label: "제출파일",
-                          current: aggregated.pendingFeedbackTodoCount,
-                          total: aggregated.todoTotal,
-                          barClassName: "bg-purple-500",
-                          trackClassName: "bg-purple-100",
-                          useRatioColor: true,
-                        },
-                        {
-                          label: "피드백 작성 완료",
-                          current: aggregated.feedbackCompletedTodoCount,
-                          total: aggregated.todoTotal,
-                          barClassName: "bg-blue-500",
-                          trackClassName: "bg-blue-100",
-                          useRatioColor: true,
-                        },
-                      ]}
-                      onClick={() => setStatusModalOpen(true)}
-                    />
-
-                    <ModalBase open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
-                      <StudentStatusDetailModal
-                        studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                        open={statusModalOpen}
-                        onClose={() => setStatusModalOpen(false)}
-                        summary={summary}
-                      />
-                    </ModalBase>
-                  </>
+                  <MentorDashboard
+                    metrics={{
+                      total: aggregated.todoTotal,
+                      submittedCount:
+                        (aggregated.pendingFeedbackTodoCount ?? 0) +
+                        (aggregated.feedbackCompletedTodoCount ?? 0),
+                      feedbackWrittenCount: aggregated.feedbackCompletedTodoCount ?? 0,
+                      feedbackConfirmedCount: aggregated.feedbackRead ?? 0,
+                    }}
+                  />
                 ) : (
                   <p className="p-4 text-sm text-muted-foreground">위에서 멘티를 선택하세요.</p>
                 )}
