@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiDownload, FiChevronLeft, FiEye, FiEyeOff, FiTrash2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
@@ -35,7 +35,8 @@ export default function MenteeTaskDetailPage() {
   const [activePinId, setActivePinId] = useState<number | null>(null);
   const [showPins, setShowPins] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [uploads, setUploads] = useState<Array<{ id: number; url: string; type?: string; name?: string }>>([]);
+  /** 학습 점검하기에 표시할 파일 = 멘티가 올린 것만 (멘토 PDF 제외) */
+  const [uploads, setUploads] = useState<Array<{ id: number; url: string; type?: string; name?: string; originalIndex: number }>>([]);
   const [blobUrlsByUrl, setBlobUrlsByUrl] = useState<Record<string, string>>({});
   const [pendingUploads, setPendingUploads] = useState<Array<{ id: string; url: string; file: File }>>([]);
   const [feedbackPinsByImage, setFeedbackPinsByImage] = useState<Record<number, { id: number; x: number; y: number; text: string }[]>>({});
@@ -76,18 +77,22 @@ export default function MenteeTaskDetailPage() {
   };
 
   useEffect(() => {
-    if (!task?.files) {
+    if (!task?.files || task.menteeId == null) {
       setUploads([]);
       return;
     }
-    const next = task.files
-      .map((f) => ({
+    const menteeOnly = task.files
+      .map((f, originalIndex) => ({ f, originalIndex }))
+      .filter(({ f }) => f.creatorId === task.menteeId);
+    const next = menteeOnly
+      .map(({ f, originalIndex }) => ({
         id: f.fileId,
         url: normalizeFileUrl(f.url ?? ""),
         type: f.type,
         name: f.name,
+        originalIndex,
       }))
-      .filter((f) => f.url);
+      .filter((u) => u.url);
     setUploads(next);
     if (activeImageIndex >= next.length) {
       setActiveImageIndex(Math.max(0, next.length - 1));
@@ -297,14 +302,23 @@ export default function MenteeTaskDetailPage() {
       setIsSavingTask(false);
     }
   };
+  /** 멘토가 올린 파일(과제 PDF 등) = 다운로드용 */
+  const mentorFiles = useMemo(() => {
+    if (!task?.files || task.menteeId == null) return [];
+    return task.files.filter((f) => f.creatorId != null && f.creatorId !== task.menteeId);
+  }, [task?.files, task?.menteeId]);
+
   const activeIsPending = activeImageIndex >= uploads.length;
-  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeImageIndex] ?? [];
+  const activeOriginalIndex = uploads[activeImageIndex]?.originalIndex ?? -1;
+  const feedbackPins = activeIsPending ? [] : feedbackPinsByImage[activeOriginalIndex] ?? [];
 
   const handleAssignmentDownload = () => {
-    const first = uploads[0];
+    const first = mentorFiles[0];
     if (!first) return;
+    const url = normalizeFileUrl(first.url ?? "");
+    if (!url) return;
     fileApi
-      .fetchFileBlob(first.url)
+      .fetchFileBlob(url)
       .then((blob) => {
         const u = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -354,7 +368,7 @@ export default function MenteeTaskDetailPage() {
               <button
                 type="button"
                 onClick={handleAssignmentDownload}
-                disabled={uploads.length === 0}
+                disabled={mentorFiles.length === 0}
                 className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-500 disabled:opacity-50"
               >
                 <FiDownload size={12} />

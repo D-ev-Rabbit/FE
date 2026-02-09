@@ -38,6 +38,7 @@ export type MenteeTodo = {
     url: string;
     type?: string;
     name?: string;
+    creatorId?: number;
     version?: string | null;
     feedbacks: unknown[];
   }[];
