@@ -7,7 +7,7 @@ import { HiOutlineUser } from "react-icons/hi";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
 import type { MentorMentee, MentorMenteeSummary } from "@/types/mentor";
 import { mentorSummaryApi } from "@/api/mentor/summary";
-import StudentStatusCard from "@/pages/mentor/components/StudentStatusCard";
+import MentorStatusDashboard from "@/pages/mentor/components/MentorStatusDashboard";
 import StudentStatusDetailModal from "@/pages/mentor/components/StudentStatusDetailModal";
 import ActionCard from "../components/ActionCard";
 import { cn } from "@/shared/lib/cn";
@@ -298,35 +298,15 @@ export default function MenteesPage() {
                 <div className="text-sm font-extrabold text-gray-900 p-4">현황</div>
                 {selectedStudent ? (
                   <>
-                    <StudentStatusCard
+                    <MentorStatusDashboard
+                      total={aggregated.todoTotal}
+                      submittedCount={
+                        (aggregated.pendingFeedbackTodoCount ?? 0) +
+                        (aggregated.feedbackCompletedTodoCount ?? 0)
+                      }
+                      feedbackWrittenCount={aggregated.feedbackCompletedTodoCount ?? 0}
+                      feedbackConfirmedCount={aggregated.feedbackRead ?? 0}
                       studentName={`고등학교 ${selectedStudent.grade}학년 · ${selectedStudent.name}`}
-                      periodLabel="Today"
-                      items={[
-                        {
-                          label: "To do",
-                          current: aggregated.todoCompleted,
-                          total: aggregated.todoTotal,
-                          barClassName: "bg-green-500",
-                          trackClassName: "bg-green-100",
-                          useRatioColor: true,
-                        },
-                        {
-                          label: "제출파일",
-                          current: aggregated.pendingFeedbackTodoCount,
-                          total: aggregated.todoTotal,
-                          barClassName: "bg-purple-500",
-                          trackClassName: "bg-purple-100",
-                          useRatioColor: true,
-                        },
-                        {
-                          label: "피드백 작성 완료",
-                          current: aggregated.feedbackCompletedTodoCount,
-                          total: aggregated.todoTotal,
-                          barClassName: "bg-blue-500",
-                          trackClassName: "bg-blue-100",
-                          useRatioColor: true,
-                        },
-                      ]}
                       onClick={() => setStatusModalOpen(true)}
                     />
 
