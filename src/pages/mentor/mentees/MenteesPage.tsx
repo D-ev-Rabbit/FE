@@ -359,7 +359,7 @@ export default function MenteesPage() {
               </div>
             </aside>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );
