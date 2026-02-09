@@ -53,7 +53,7 @@ export function MentorDashboard({ metrics, onClick, className }: MentorDashboard
   ];
 
   const content = (
-    <>
+    <div className="flex flex-col gap-5">
       <SummaryBar items={summaryItems} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -84,11 +84,11 @@ export function MentorDashboard({ metrics, onClick, className }: MentorDashboard
       </div>
 
       {onClick && (
-        <p className="mt-6 text-center text-xs text-gray-500">
+        <p className="text-center text-xs text-gray-500">
           * 각 카드를 클릭하면 자세한 정보를 볼 수 있습니다.
         </p>
       )}
-    </>
+    </div>
   );
 
   if (onClick) {

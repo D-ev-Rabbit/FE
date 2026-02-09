@@ -64,7 +64,9 @@ export function ProgressRing({
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-bold text-gray-900">
             {value}
-            <span className="text-base font-normal text-gray-500">/{max}</span>
+            <span className="text-base font-normal text-gray-500">
+              /{max}
+            </span>
           </span>
         </div>
       </div>

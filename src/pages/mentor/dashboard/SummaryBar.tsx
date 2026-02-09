@@ -43,7 +43,7 @@ export function SummaryBar({ items }: SummaryBarProps) {
               style={{
                 width: animated ? `${width}%` : "0%",
                 backgroundColor: item.color,
-                marginLeft: index > 0 ? 2 : 0,
+                marginLeft: index > 0 ? "2px" : 0,
               }}
             />
           );

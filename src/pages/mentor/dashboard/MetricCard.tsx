@@ -21,11 +21,11 @@ export function MetricCard({
   const percentage = max > 0 ? Math.round((value / max) * 100) : 0;
 
   return (
-    <div className="flex flex-col items-center rounded-xl border border-gray-200 bg-white p-6 transition-all hover:border-violet-200 hover:shadow-lg">
+    <div className="group relative flex flex-col items-center rounded-xl border border-gray-200 bg-white p-6 transition-all hover:shadow-lg hover:border-violet-200">
       <div className="mb-4 flex w-full items-center gap-2">
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[16px]"
-          style={{ backgroundColor: `${color}20`, color }}
+          className="flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${color}15`, color: color }}
         >
           {icon}
         </div>
