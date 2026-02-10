@@ -74,9 +74,9 @@ export function MentorDashboard({ metrics, onClick, className }: MentorDashboard
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
               전체 수행률
             </p>
-            <p className="mt-1 text-3xl font-bold tabular-nums text-gray-900">
+            <p className="mt-1 text-2xl font-bold tabular-nums text-gray-900">
               {overallPct}
-              <span className="text-lg font-medium text-gray-500"> %</span>
+              <span className="text-base font-medium text-gray-500"> %</span>
             </p>
           </div>
           <p className="text-sm text-gray-500">
@@ -132,8 +132,8 @@ export function MentorDashboard({ metrics, onClick, className }: MentorDashboard
         </div>
       </div>
 
-      {/* ── 3 Metric Cards (가로 막대 카드) ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* ── 3 Metric Cards (가로 막대 카드, 넓게) ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:min-w-0">
         <MetricInfoCard
           icon={<FaCheckCircle className="h-5 w-5" style={{ color: COLORS.waitingFeedback }} />}
           iconBg={`${COLORS.waitingFeedback}18`}

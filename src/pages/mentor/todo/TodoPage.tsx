@@ -9,10 +9,8 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { buildMonthGrid, formatMonthLabel, dayLabels } from "@/pages/mentee/CalendarPage/utils/date";
 import type { MentorTodo } from "@/types/mentorTodo";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
-import ModalBase from "@/shared/ui/modal/ModalBase";
 import { mentorMenteeApi } from "@/api/mentor/mentees";
 import { mentorTodoApi } from "@/api/mentor/todo";
-import { mentorPlannerApi } from "@/api/mentor/planner";
 import { fileApi, type MentorTodoFile } from "@/api/file";
 
 export default function MentorTodoPage(){
@@ -24,15 +22,7 @@ export default function MentorTodoPage(){
   const [isLoadingTodos, setIsLoadingTodos] = useState(false)
   const [todoPage, setTodoPage] = useState(0)
   const perPage = 2
-  const [commentOpen, setCommentOpen] = useState(false);
-  const [commentText, setCommentText] = useState("");
-  const [isSavingComment, setIsSavingComment] = useState(false);
-  const [commentSuccessOpen, setCommentSuccessOpen] = useState(false);
   const [uploadSuccessOpen, setUploadSuccessOpen] = useState(false);
-  
-  const [isLoadingComment, setIsLoadingComment] = useState(false);
-  const [plannerComment, setPlannerComment] = useState<string | null>(null);
-  const hasPlannerComment = !!plannerComment?.trim();
 
   const [errorModal, setErrorModal] = useState<{
     open: boolean;
@@ -290,74 +280,6 @@ export default function MentorTodoPage(){
       });
   }
 
-  const openPlannerComment = () => {
-    setCommentText(plannerComment ?? "");
-    setCommentOpen(true);
-  };
-
-  const savePlannerComment = async () => {
-    if (!selectedMenteeId || !commentText.trim()) return;
-    setIsSavingComment(true);
-    try {
-      await mentorPlannerApi.patchPlannerComment(
-        Number(selectedMenteeId),
-        selectedDateStr,
-        { comment: commentText.trim() }
-      );
-      setPlannerComment(commentText.trim());
-
-      setCommentOpen(false);
-      setCommentSuccessOpen(true);
-    } catch (err) {
-      setErrorModal({
-        open: true,
-        title: "피드백 등록 실패",
-        description: getErrorMessage(err, "플래너 피드백 등록에 실패했어요. 잠시 후 다시 시도해주세요."),
-      });
-    } finally {
-      setIsSavingComment(false);
-    }
-  };
-
-  //날짜별 플래너 피드백 코멘트 상태 갱신
-  useEffect(() => {
-    if (!selectedMenteeId) return;
-
-    let cancelled = false;
-
-    const fetchPlannerComment = async () => {
-      setIsLoadingComment(true);
-      try {
-        const res = await mentorPlannerApi.getPlannerComment(
-          Number(selectedMenteeId),
-          selectedDateStr
-        );
-        if (cancelled) return;
-
-        console.log("[getPlannerComment] status:", res.status);
-        console.log("[getPlannerComment] data:", res.data);
-
-        const comment = res.data?.comment;
-        setPlannerComment(comment?.trim() ? comment : null);
-      } catch (err: any) {
-        if (cancelled) return;
-        console.log("[getPlannerComment] FAILED", {
-          status: err?.response?.status,
-          data: err?.response?.data,
-          message: err?.message,
-        });
-        setPlannerComment(null);
-      } finally {
-        if (!cancelled) setIsLoadingComment(false);
-      }
-    };
-
-    fetchPlannerComment();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedMenteeId, selectedDateStr]);
 
 
   return (
@@ -399,7 +321,8 @@ export default function MentorTodoPage(){
                     <MenteeCard
                       key={m.id}
                       name={m.name}
-                      grade={`고등학교 ${m.grade}학년`}
+                      grade={`${m.grade}학년`}
+                      school={m.school}
                       variant="pc"
                       selected={String(m.id) === selectedMenteeId}
                       onClick={() => setSelectedMenteeId(String(m.id))}
@@ -484,40 +407,9 @@ export default function MentorTodoPage(){
 
           {/* TodoList Table */}
           <section className="w-full min-w-0 flex-1">
-            {/* 과목필터 & 플래너 피드백 */}
+            {/* 과목필터 */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 max-w-[900px]">
-              <SubjectFilter value={subject} onChange={setSubject}/>
-              <button
-                type="button"
-                onClick={openPlannerComment}
-                disabled={!selectedMenteeId || isLoadingComment}
-                className="rounded-xl bg-violet-600 px-4 py-2 text-white disabled:opacity-50"
-              >
-                {hasPlannerComment ? "피드백 수정하기" : "플래너 피드백하기"}
-              
-                
-              </button>
-            </div>
-            <div className="p-4 w-full ">
-              <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm max-w-[880px]">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">플래너 피드백</div>
-                  <div className="text-xs text-gray-400">
-                    {isLoadingComment ? "불러오는 중..." : hasPlannerComment ? "작성됨" : "미작성"}
-                  </div>
-                </div>
-
-                <div className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
-                  {isLoadingComment ? (
-                    <span className="text-gray-400">불러오는 중...</span>
-                  ) : hasPlannerComment ? (
-                    plannerComment
-                  ) : (
-                    <span className="text-gray-400">아직 작성된 피드백이 없어요.</span>
-                  )}
-                </div>
-
-              </div>
+              <SubjectFilter value={subject} onChange={setSubject} />
             </div>
             <div className="w-full max-w-[900px] bg-white p-4">
               <div className="flex items-center justify-between pb-3">
@@ -572,6 +464,7 @@ export default function MentorTodoPage(){
                   onAdd={openCreate}
                 />
               </div>
+
             </div>
           </section>
         </div>
@@ -588,16 +481,6 @@ export default function MentorTodoPage(){
         confirmText="확인"
       />
       <ConfirmModal
-        open={commentSuccessOpen}
-        variant="success"
-        title="피드백 저장 완료"
-        description="멘토 플래너 피드백이 저장되었습니다."
-        onCancel={() => setCommentSuccessOpen(false)}
-        onConfirm={() => setCommentSuccessOpen(false)}
-        showCancel={false}
-        confirmText="확인"
-      />
-      <ConfirmModal
         open={uploadSuccessOpen}
         variant="success"
         title="파일 업로드 완료"
@@ -607,37 +490,6 @@ export default function MentorTodoPage(){
         showCancel={false}
         confirmText="확인"
       />
-      <ModalBase open={commentOpen} onClose={() => setCommentOpen(false)}>
-        <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl">
-          <div className="text-lg font-bold text-gray-900">오늘의 플래너 피드백</div>
-          <div className="mt-2 text-xs text-gray-500">
-            선택한 날짜({selectedDateStr})에 대한 코멘트를 남겨주세요. 새롭게 피드백한 내용으로 업데이트됩니다.
-          </div>
-          <textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="오늘의 학습 피드백을 입력하세요."
-            className="mt-4 h-40 w-full resize-none rounded-2xl border border-gray-200 p-4 text-sm outline-none focus:border-violet-300"
-          />
-          <div className="mt-5 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setCommentOpen(false)}
-              className="h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={savePlannerComment}
-              disabled={isSavingComment || !commentText.trim() || !selectedMenteeId}
-              className="h-10 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-600/90 disabled:opacity-40"
-            >
-              {isSavingComment ? "저장 중..." : "저장"}
-            </button>
-          </div>
-        </div>
-      </ModalBase>
     </div>
   );
 }

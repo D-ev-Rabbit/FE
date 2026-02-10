@@ -225,6 +225,20 @@ export default function ActivitySummaryContent() {
     if (name === "MATH") return "수학";
     return name;
   };
+
+  const displayToDate = useMemo(() => {
+    if (!summary?.to) return null;
+    const parts = summary.to.split("-").map((p) => Number(p));
+    if (parts.length !== 3 || parts.some((v) => Number.isNaN(v))) return summary.to;
+    const [y, m, d] = parts;
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() - 1);
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
+  }, [summary?.to]);
+
   const subjectEntries = useMemo(() => {
     const subjects = summary?.subjects ?? {};
     const normalized = Object.entries(subjects).reduce<Record<string, MenteeSummarySubject>>(
@@ -434,7 +448,9 @@ export default function ActivitySummaryContent() {
       </div>
 
       <div className="mt-2 mr-2 text-right text-xs text-gray-400">
-        {summary ? `기간: ${summary.from} ~ ${summary.to}` : "기간: -"}
+        {summary
+          ? `기간: ${summary.from} ~ ${displayToDate ?? summary.to}`
+          : "기간: -"}
       </div>
 
       <div className="px-5 pb-5 pt-3">

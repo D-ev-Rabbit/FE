@@ -44,8 +44,8 @@ export function MetricInfoCard({
         >
           {icon}
         </div>
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-gray-900">{title}</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="break-words text-sm font-semibold text-gray-900">{title}</h3>
           <p className="text-xs text-gray-500">
             {value}/{max}
           </p>
