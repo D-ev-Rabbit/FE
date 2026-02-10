@@ -99,7 +99,7 @@ export default function SubjectRecordModal({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <div className="text-xs font-semibold text-gray-500">시작</div>
                   <input
@@ -127,7 +127,7 @@ export default function SubjectRecordModal({
               <button
                 type="button"
                 onClick={onSaveManual}
-                className="w-full rounded-2xl bg-violet-500 px-4 py-3 text-base font-semibold text-white"
+                className="w-full rounded-2xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white"
               >
                 기록 저장
               </button>
