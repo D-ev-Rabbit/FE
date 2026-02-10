@@ -48,14 +48,13 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
-        {/* 아바타 */}
-        <div className="mx-auto mb-3 flex flex-col items-center justify-center gap-2 ">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-white">
-            ✦
-          </div>
-          <div className="text-sm font-bold tracking-wide text-violet-600">
-            설스터디
-          </div>
+        {/* 로고 */}
+        <div className="mx-auto mb-3 flex items-center justify-center">
+          <img
+            src="/logo.png"
+            alt="설스터디 로고"
+            className="h-10 w-auto"
+          />
         </div>
 
         {/* Welcome */}
