@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
-import { HiOutlineChevronDown, HiOutlineClock } from "react-icons/hi2";
+import { HiOutlineClock } from "react-icons/hi2";
 import type { SubjectGroup } from "../types/calendar";
 import { menteeStudySessionApi } from "@/api/mentee/studySession";
 import type { StudySession } from "@/types/studySession";

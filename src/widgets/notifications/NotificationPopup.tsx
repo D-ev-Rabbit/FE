@@ -22,14 +22,6 @@ const typeStyle: Record<
   TODO_INCOMPLETE: { bg: "bg-red-500", Icon: FiAlertCircle },
 };
 
-const subjectToKo = (value?: string | null) => {
-  if (!value) return "기타";
-  if (value === "KOREAN") return "국어";
-  if (value === "ENGLISH") return "영어";
-  if (value === "MATH") return "수학";
-  return value;
-};
-
 const replaceSubjectInMessage = (msg: string) =>
   msg
     .replaceAll("KOREAN", "국어")
