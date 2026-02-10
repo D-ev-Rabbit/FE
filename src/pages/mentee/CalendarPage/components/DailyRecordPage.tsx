@@ -13,6 +13,8 @@ type DailyRecordPageProps = {
   dateKey: string;
   readOnly: boolean;
   onBack: () => void;
+  onPrevDate: () => void;
+  onNextDate: () => void;
   onOpenDatePicker: () => void;
   onRefreshSessions?: () => void;
 };
@@ -141,13 +143,15 @@ const toPlannerDateKeyFromIso = (iso: string) => {
   return minutes < DAY_START_MINUTES ? addDaysToDateKey(baseKey, -1) : baseKey;
 };
 
-const toIsoFromDateTime = (dateKey: string, time: string) => {
-  const [h, min] = time.split(":").map(Number);
-  const minutes = (h ?? 0) * 60 + (min ?? 0);
-  const hh = String(h ?? 0).padStart(2, "0");
-  const mi = String(min ?? 0).padStart(2, "0");
-  const baseKey = minutes < DAY_START_MINUTES ? addDaysToDateKey(dateKey, 1) : dateKey;
-  return `${baseKey}T${hh}:${mi}:00`;
+const toPlannerBaseDateTime = (dateKey: string) => {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, PLANNER_DAY_START_HOUR, 0, 0, 0);
+};
+
+const addMinutesToDate = (date: Date, minutes: number) => {
+  const next = new Date(date);
+  next.setMinutes(next.getMinutes() + minutes);
+  return next;
 };
 
 const toRecordItem = (session: StudySession): RecordItem | null => {
@@ -213,6 +217,17 @@ const parseHMToMinutes = (value: string) => {
 const isOverlap = (startA: number, endA: number, startB: number, endB: number) =>
   startA < endB && startB < endA;
 
+const hasOverlapInRecords = (records: RecordItem[], start: number, end: number) =>
+  records.some((record) => {
+    const startValue = parseClockToMinutes(record.startTime);
+    const endValue = parseClockToMinutes(record.endTime);
+    if (startValue === null || endValue === null) return false;
+    let s = toTimelineMinutes(startValue);
+    let e = toTimelineMinutes(endValue);
+    if (e <= s) e += 1440;
+    return isOverlap(start, end, s, e);
+  });
+
 const calcDurationMinutes = (start: string, end: string) => {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
@@ -232,6 +247,8 @@ export default function DailyRecordPage({
   dateKey,
   readOnly,
   onBack,
+  onPrevDate,
+  onNextDate,
   onOpenDatePicker,
   onRefreshSessions,
 }: DailyRecordPageProps) {
@@ -246,6 +263,7 @@ export default function DailyRecordPage({
   const [manualStart, setManualStart] = useState("05:00");
   const [manualEnd, setManualEnd] = useState("05:50");
   const [manualError, setManualError] = useState("");
+  const [autoError, setAutoError] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
@@ -384,7 +402,6 @@ export default function DailyRecordPage({
   }, [autoElapsedSec]);
 
   const openRecordModal = (subjectId: string) => {
-    if (readOnly) return;
     if (autoRunning && runningSubjectId && subjectId !== runningSubjectId) {
       setPendingSubjectId(subjectId);
       setConfirmOpen(true);
@@ -545,7 +562,11 @@ export default function DailyRecordPage({
   }, [records, autoRunning, autoStart, runningSubjectId]);
 
   const handleAutoToggle = () => {
-    if (readOnly) return;
+    if (readOnly) {
+      setAutoError("자동 기록은 오늘 날짜에서만 사용할 수 있어요.");
+      return;
+    }
+    setAutoError("");
     if (autoRunning) {
       if (runningSubjectId && runningSubjectId !== activeSubjectId) {
         setPendingSubjectId(activeSubjectId);
@@ -561,7 +582,6 @@ export default function DailyRecordPage({
   };
 
   const handleSaveManual = () => {
-    if (readOnly) return;
     const duration = calcDurationMinutes(manualStart, manualEnd);
     if (duration === 0 || !activeSubject) {
       setManualError("종료 시간은 시작 시간보다 늦어야 합니다");
@@ -573,32 +593,46 @@ export default function DailyRecordPage({
       setManualError("시간 형식이 올바르지 않습니다");
       return;
     }
-    const hasOverlap = records.some((record) => {
-      const start = parseClockToMinutes(record.startTime);
-      const end = parseClockToMinutes(record.endTime);
-      if (start === null || end === null) return false;
-      let s = toTimelineMinutes(start);
-      let e = toTimelineMinutes(end);
-      if (e <= s) e += 1440;
-      let ns = toTimelineMinutes(newStart);
-      let ne = toTimelineMinutes(newEnd);
-      if (ne <= ns) ne += 1440;
-      return isOverlap(ns, ne, s, e);
-    });
+    if (newStart >= newEnd) {
+      setManualError("종료 시간은 시작 시간보다 늦어야 합니다");
+      return;
+    }
+    const ns = toTimelineMinutes(newStart);
+    const ne = toTimelineMinutes(newEnd);
+    const isWrapped = ne <= ns;
+    const nextDateKey = addDaysToDateKey(dateKey, 1);
+    const nextRecords = recordsByDate[nextDateKey] ?? [];
+    const hasOverlap =
+      (!isWrapped && hasOverlapInRecords(records, ns, ne)) ||
+      (isWrapped &&
+        (hasOverlapInRecords(records, ns, 1440) ||
+          hasOverlapInRecords(nextRecords, 0, ne)));
     if (hasOverlap) {
       setManualError("해당 시간대에 이미 기록이 있어요");
       return;
     }
     setManualError("");
-    const startAt = toIsoFromDateTime(dateKey, manualStart);
-    const endAt = toIsoFromDateTime(dateKey, manualEnd);
-    menteeStudySessionApi.createManual({
-      subject: activeSubject.name,
-      startAt,
-      endAt,
-    })
-      .then((res) => {
-        setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(res.data.sessions)));
+    setAutoError("");
+    const baseDate = toPlannerBaseDateTime(dateKey);
+    const createManual = (startMinutes: number, endMinutes: number, base: Date) =>
+      menteeStudySessionApi.createManual({
+        subject: activeSubject.name,
+        startAt: formatLocalDateTime(addMinutesToDate(base, startMinutes)),
+        endAt: formatLocalDateTime(addMinutesToDate(base, endMinutes)),
+      });
+
+    const requests = isWrapped
+      ? [
+        createManual(ns, 1440, baseDate),
+        createManual(0, ne, addMinutesToDate(baseDate, 1440)),
+      ]
+      : [createManual(ns, ne, baseDate)];
+
+    Promise.all(requests)
+      .then((responses) => {
+        responses.forEach((res) => {
+          setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(res.data.sessions)));
+        });
         onRefreshSessions?.();
       })
       .catch(() => {
@@ -615,24 +649,41 @@ export default function DailyRecordPage({
 
   return (
     <div className="space-y-6 pb-6 pt-1">
-      <div className="relative z-10 flex items-center gap-2">
+      <div className="relative z-10 flex items-center">
         <button
           type="button"
           onClick={handleBack}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
-          aria-label="뒤로가기"
+          className="border-0 bg-transparent p-0 text-base font-semibold text-gray-600 outline-none hover:border-0 hover:outline-none focus:outline-none focus-visible:outline-none"
+          aria-label="플래너로 돌아가기"
         >
-          ‹
+          ←
         </button>
-        <button
-          type="button"
-          onClick={onOpenDatePicker}
-          className="flex items-center gap-1 text-base font-semibold text-gray-900"
-          aria-label="날짜 선택"
-        >
-          {todayLabel}
-          <HiOutlineChevronDown className="h-4 w-4 text-gray-400" />
-        </button>
+        <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2">
+          <button
+            type="button"
+            onClick={onPrevDate}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
+            aria-label="전날 이동"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={onOpenDatePicker}
+            className="whitespace-nowrap border-0 bg-transparent p-0 text-base font-semibold text-gray-900 outline-none hover:border-0 hover:outline-none focus:outline-none focus-visible:outline-none"
+            aria-label="날짜 선택"
+          >
+            {todayLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onNextDate}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white p-0 text-gray-500 shadow-none"
+            aria-label="다음날 이동"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-1">
@@ -644,10 +695,9 @@ export default function DailyRecordPage({
               type="button"
               key={subject.id}
               onClick={() => openRecordModal(subject.id)}
-              disabled={readOnly}
               className={`flex min-w-0 items-center justify-center gap-1 rounded-2xl px-1.5 py-1 ${color.bg} ${
                 isRunning ? "border-2 border-emerald-400" : ""
-              } ${readOnly ? "opacity-50" : ""}`}
+              }`}
             >
               <span className={`h-2 w-2 rounded-full ${color.dot}`} />
               <span className={`text-[11px] font-semibold ${color.text} truncate`}>
@@ -751,11 +801,6 @@ export default function DailyRecordPage({
             총 공부시간 {formatTimeHM(totalStudyMinutes)}
           </div>
         </div>
-        {readOnly && (
-          <div className="mt-2 text-xs font-semibold text-gray-400">
-            오늘 날짜에서만 기록할 수 있어요.
-          </div>
-        )}
         <div className="mt-3 space-y-3">
           {records.length === 0 && (
             <div className="text-xs font-semibold text-gray-400">
@@ -817,7 +862,6 @@ export default function DailyRecordPage({
                             })
                             .catch(() => {});
                         }}
-                        disabled={readOnly}
                         className="rounded-full border border-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-500"
                         aria-label="기록 삭제"
                       >
@@ -841,19 +885,23 @@ export default function DailyRecordPage({
         manualStart={manualStart}
         manualEnd={manualEnd}
         manualError={manualError}
+        autoError={autoError}
         onClose={() => setRecordModalOpen(false)}
         onChangeMode={(nextMode) => {
           setMode(nextMode);
           setManualError("");
+          setAutoError("");
         }}
         onToggleAuto={handleAutoToggle}
         onChangeManualStart={(value) => {
           setManualStart(value);
           setManualError("");
+          setAutoError("");
         }}
         onChangeManualEnd={(value) => {
           setManualEnd(value);
           setManualError("");
+          setAutoError("");
         }}
         onSaveManual={handleSaveManual}
       />
