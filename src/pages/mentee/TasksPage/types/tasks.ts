@@ -1,4 +1,4 @@
-export type TaskStatus = "done" | "pending";
+export type TaskStatus = 0 | 1 | 2;
 
 export type TaskItem = {
   id: number;

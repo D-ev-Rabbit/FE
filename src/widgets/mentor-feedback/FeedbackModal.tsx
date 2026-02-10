@@ -65,6 +65,8 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         }
     }, [mode]);
     const wrapRef = useRef<HTMLDivElement | null>(null);
+    const imgRef = useRef<HTMLImageElement | null>(null);
+    const [imageBox, setImageBox] = useState({ left: 0, top: 0, width: 0, height: 0 });
 
     // submission 파일 URL들을 Bearer로 fetch → blob URL 캐시
     useEffect(() => {
@@ -184,8 +186,6 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, dirty]);
 
-    if (!open || !submission) return null;
-
     const requestClose = () => {
         if (dirty) setAskLeave(true);
         else onClose();
@@ -193,12 +193,43 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
 
     const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
+    const calcImageBox = () => {
+        const wrap = wrapRef.current;
+        const img = imgRef.current;
+        if (!wrap) return { left: 0, top: 0, width: 0, height: 0 };
+        const wrapW = wrap.clientWidth;
+        const wrapH = wrap.clientHeight;
+        if (!img || !img.naturalWidth || !img.naturalHeight) {
+            return { left: 0, top: 0, width: wrapW, height: wrapH };
+        }
+        const scale = Math.min(wrapW / img.naturalWidth, wrapH / img.naturalHeight);
+        const renderedW = img.naturalWidth * scale;
+        const renderedH = img.naturalHeight * scale;
+        const left = (wrapW - renderedW) / 2;
+        const top = (wrapH - renderedH) / 2;
+        return { left, top, width: renderedW, height: renderedH };
+    };
+
+    const updateImageBox = () => {
+        setImageBox(calcImageBox());
+    };
+
+    useEffect(() => {
+        updateImageBox();
+        const wrap = wrapRef.current;
+        if (!wrap) return;
+        const ro = new ResizeObserver(updateImageBox);
+        ro.observe(wrap);
+        return () => ro.disconnect();
+    }, [imgSrc, activeImageIdx]);
+
     const getRel = (clientX: number, clientY: number) => {
         const el = wrapRef.current!;
         const r = el.getBoundingClientRect();
-        const x = clamp01((clientX - r.left) / r.width);
-        const y = clamp01((clientY - r.top) / r.height);
-        return { x, y, w: r.width, h: r.height };
+        const box = imageBox.width > 0 ? imageBox : { left: 0, top: 0, width: r.width, height: r.height };
+        const x = clamp01((clientX - r.left - box.left) / box.width);
+        const y = clamp01((clientY - r.top - box.top) / box.height);
+        return { x, y };
     };
 
     // 핀 추가(번호 자동 증가) - number로만
@@ -377,11 +408,11 @@ if (pinEl) {
                 date: submission.submittedAt,
                 subject: toApiSubject(submission.subject),
                 goal: submission.goal ?? "",
-                isCompleted: true,
+                state: 2,
             });
-            if (!updateRes.data?.isCompleted) {
+            if (updateRes.data?.state !== 2) {
                 const recheck = await mentorTodoApi.getTodo(Number(submission.id));
-                if (!recheck.data?.isCompleted) {
+                if (recheck.data?.state !== 2) {
                     setSaveError({
                         open: true,
                         title: "상태 업데이트 실패",
@@ -560,6 +591,8 @@ if (pinEl) {
         </div>
     );
 
+    if (!open || !submission) return null;
+
     return (
         <>
             {/* dim */}
@@ -689,7 +722,13 @@ if (pinEl) {
                                     title={activeFile?.name ?? "PDF"}
                                 />
                             ) : (
-                                <img src={imgSrc} alt="" className="h-full w-full object-contain" />
+                                <img
+                                    ref={imgRef}
+                                    src={imgSrc}
+                                    alt=""
+                                    className="h-full w-full object-contain"
+                                    onLoad={updateImageBox}
+                                />
                             )}
 
                             {/* pins layer */}
@@ -702,6 +741,14 @@ if (pinEl) {
 
                                     const fillClass = isDragging ? "fill-orange-500" : isSelected ? "fill-violet-600" : "fill-black/70";
                                     const textClass = isDragging ? "text-orange-600" : "text-violet-700";
+
+                                    const pinStyle =
+                                        imageBox.width > 0 && imageBox.height > 0
+                                            ? {
+                                                  left: `${imageBox.left + p.x * imageBox.width}px`,
+                                                  top: `${imageBox.top + p.y * imageBox.height}px`,
+                                              }
+                                            : { left: `${p.x * 100}%`, top: `${p.y * 100}%` };
 
                                     return (
                                         <button
@@ -725,7 +772,7 @@ if (pinEl) {
                                                 setSelectedNumber(p.number);
                                                 setIsMobileSheetOpen(true);
                                             }}
-                                            style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
+                                            style={pinStyle}
                                             aria-label={`핀 ${p.number}`}
                                             className={cn(
                                                 "btn-none",

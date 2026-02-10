@@ -30,9 +30,8 @@ export type MenteeTodo = {
   date: string; // YYYY-MM-DD
   subject: string;
   goal: string;
-  isCompleted: boolean;
+  state: number; // 0: 과제 미완료, 1: 피드백 대기, 2: 피드백 완료
   comment: string | null;
   files?: TodoFile[];
   // 나머지 필드 있으면 유지
 };
-

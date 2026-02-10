@@ -57,7 +57,7 @@ export default function MenteeTasksPage() {
       bySubject.get(subject)!.tasks.push({
         id: todo.id,
         title: todo.title,
-        status: todo.isCompleted ? "done" : "pending",
+        status: (todo.state ?? 0) as SubjectSectionType["tasks"][number]["status"],
         isMine: todo.isMine,
       });
     });

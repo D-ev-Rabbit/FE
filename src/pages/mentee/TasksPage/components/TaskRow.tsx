@@ -7,18 +7,22 @@ interface TaskRowProps {
 }
 
 const statusConfig = {
-  done: {
-    label: "완료",
-    className: "bg-emerald-100 text-emerald-600",
-  },
-  pending: {
+  0: {
     label: "미완료",
     className: "bg-gray-200 text-gray-500",
+  },
+  1: {
+    label: "피드백 대기",
+    className: "bg-amber-100 text-amber-600",
+  },
+  2: {
+    label: "피드백 완료",
+    className: "bg-emerald-100 text-emerald-600",
   },
 } as const;
 
 export default function TaskRow({ task }: TaskRowProps) {
-  const status = statusConfig[task.status];
+  const status = statusConfig[task.status] ?? statusConfig[0];
   const navigate = useNavigate();
 
   return (

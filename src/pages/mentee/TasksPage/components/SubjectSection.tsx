@@ -18,7 +18,7 @@ export default function SubjectSection({ section }: SubjectSectionProps) {
       ) : (
         <div className="space-y-3">
           {[...section.tasks]
-            .sort((a, b) => Number(a.status === "done") - Number(b.status === "done"))
+            .sort((a, b) => a.status - b.status)
             .map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}

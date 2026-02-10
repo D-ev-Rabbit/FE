@@ -31,7 +31,7 @@ export type MenteeTodo = {
   date: string; // YYYY-MM-DD
   subject: string;
   goal?: string;
-  isCompleted: boolean;
+  state: number; // 0: 과제 미완료, 1: 피드백 대기, 2: 피드백 완료
   isMine?: boolean;
   comment?: string;
   files?: {
@@ -62,7 +62,7 @@ export type SubjectGroup = {
 
 export type GetMenteeTodosParams = {
   date?: string; // query
-  isCompleted?: boolean;
+  state?: number;
   subject?: string;
 };
 
@@ -71,7 +71,7 @@ export type CreateMenteeTodoBody = {
   date: string;
   subject: string;
   goal?: string;
-  isCompleted?: boolean;
+  state?: number;
 };
 
 export type CreateMenteeTodoResponse = {
@@ -82,7 +82,7 @@ export type CreateMenteeTodoResponse = {
   date: string;
   subject: string;
   goal: string | null;
-  isCompleted: boolean;
+  state: number;
   comment: string | null;
 };
 
@@ -99,5 +99,5 @@ export type PatchMenteeTodoBody = {
   date: string; // YYYY-MM-DD
   subject: string;
   goal: string;
-  isCompleted: boolean;
+  state: number;
 };
