@@ -400,6 +400,7 @@ export default function MentorTodoPage(){
                       key={m.id}
                       name={m.name}
                       grade={`고등학교 ${m.grade}학년`}
+                      school={m.school}
                       variant="pc"
                       selected={String(m.id) === selectedMenteeId}
                       onClick={() => setSelectedMenteeId(String(m.id))}
@@ -491,11 +492,9 @@ export default function MentorTodoPage(){
                 type="button"
                 onClick={openPlannerComment}
                 disabled={!selectedMenteeId || isLoadingComment}
-                className="rounded-xl bg-violet-600 px-4 py-2 text-white disabled:opacity-50"
+                className="rounded-xl bg-violet-600 px-2 py-2 text-white text-sm disabled:opacity-50"
               >
                 {hasPlannerComment ? "피드백 수정하기" : "플래너 피드백하기"}
-              
-                
               </button>
             </div>
             <div className="p-4 w-full ">

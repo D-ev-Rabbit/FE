@@ -17,6 +17,7 @@ type Mentee = {
   key: string;
   menteeName: string;
   gradeLabel: string;
+  schoolLabel: string;
 };
 
 export default function FeedbackPage() {
@@ -44,6 +45,7 @@ export default function FeedbackPage() {
         key: String(m.id),
         menteeName: m.name,
         gradeLabel: `고등학교 ${m.grade}학년`,
+        schoolLabel: m.school,
       })),
     [rawMentees]
   );
@@ -239,6 +241,7 @@ export default function FeedbackPage() {
                 key={m.key}
                 name={m.menteeName}
                 grade={m.gradeLabel}
+                school={m.schoolLabel}
                 variant="pc"
                 selected={m.key === selectedMenteeKey}
                 onClick={() => onSelectMentee(m.key)}
