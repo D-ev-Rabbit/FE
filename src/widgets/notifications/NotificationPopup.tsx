@@ -22,6 +22,20 @@ const typeStyle: Record<
   TODO_INCOMPLETE: { bg: "bg-red-500", Icon: FiAlertCircle },
 };
 
+const subjectToKo = (value?: string | null) => {
+  if (!value) return "기타";
+  if (value === "KOREAN") return "국어";
+  if (value === "ENGLISH") return "영어";
+  if (value === "MATH") return "수학";
+  return value;
+};
+
+const replaceSubjectInMessage = (msg: string) =>
+  msg
+    .replaceAll("KOREAN", "국어")
+    .replaceAll("ENGLISH", "영어")
+    .replaceAll("MATH", "수학");
+
 function groupByType(list: Notice[]) {
   const grouped: Record<NotificationType, Notice[]> = {
     TODO_COMMENT: [],
@@ -145,7 +159,7 @@ export default function NotificationPopup({
 
                               {/* text */}
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-semibold text-gray-900">{n.title}</p>
+                                <p className="truncate text-sm font-semibold text-gray-900">{replaceSubjectInMessage(n.title)}</p>
                                 <p className="mt-1 text-xs text-gray-500">{n.timeLabel}</p>
                               </div>
                             </button>
