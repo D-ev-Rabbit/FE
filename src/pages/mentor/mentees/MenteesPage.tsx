@@ -194,9 +194,8 @@ export default function MenteesPage() {
             </div>
           </div>
 
-          {/* 멘티 리스트 카드 */}
-          <div className="w-full rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
-            
+          {/* 멘티 리스트 카드 (너비 제한으로 한 줄에 길게 늘어나지 않게) */}
+          <div className="w-full max-w-2xl rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
             <div className="grid grid-cols-2 gap-3 lg:hidden">
               {mentees.map((m) => (
                 <button
@@ -265,7 +264,7 @@ export default function MenteesPage() {
               <div className="text-sm font-extrabold text-gray-900 p-4"></div>
 
               {/* 날짜 */}
-              <div className="flex w-full max-w-xl gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex w-full max-w-3xl gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-sm text-gray-400 ">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
                     <FaRegCalendar />
@@ -300,7 +299,7 @@ export default function MenteesPage() {
               </div>
 
               {/* 현황 카드 (해당 일자별) */}
-              <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm w-full max-w-2xl">
+              <div className="w-full max-w-4xl rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
                 <div className="mb-1 text-sm font-extrabold text-gray-900">현황</div>
                 <p className="mb-4 text-xs text-gray-500">멘토링 과제 수행률을 한눈에 확인하세요</p>
                 {selectedStudent ? (
@@ -320,7 +319,7 @@ export default function MenteesPage() {
               </div>
 
               {/* 액션 버튼 */}
-              <div className="grid w-full max-w-2xl gap-4 sm:grid-cols-2">
+              <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-2">
                 <ActionCard
                   label="할 일 배정하기"
                   onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}

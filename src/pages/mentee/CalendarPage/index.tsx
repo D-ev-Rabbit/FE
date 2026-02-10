@@ -243,12 +243,17 @@ export default function MenteeCalendarPage() {
     };
   }, [weekDays]);
 
+  const [addTaskError, setAddTaskError] = useState("");
   const handleCreateTodo = async () => {
-    try {
-      const title = taskDraftText.trim();
-      if (!title) return;
-      if (!selectedSubject) return;
+    const title = taskDraftText.trim();
+    if (!title) {
+      setAddTaskError("할일을 입력해주세요.");
+      return;
+    }
+    if (!selectedSubject) return;
+    setAddTaskError("");
 
+    try {
       await createMenteeTodo({
         title,
         date: currentDateKey,          //  선택된 날짜
@@ -616,11 +621,18 @@ export default function MenteeCalendarPage() {
 
       <AddTaskModal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setAddTaskError("");
+        }}
         selectedSubject={selectedSubject}
         taskDraftText={taskDraftText}
-        onChangeTaskDraftText={setTaskDraftText}
+        onChangeTaskDraftText={(v) => {
+          setTaskDraftText(v);
+          setAddTaskError("");
+        }}
         onAddTask={handleCreateTodo}
+        errorMessage={addTaskError}
       />
 
 
