@@ -1,52 +1,67 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-
-import ModalBase from "@/shared/ui/modal/ModalBase";
-import { FaRegCalendar, FaPen, FaTasks } from "react-icons/fa";
-import { HiOutlineUser } from "react-icons/hi";
-import { mentorMenteeApi } from "@/api/mentor/mentees";
+import { FaRegCalendar } from "react-icons/fa";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import MenteeCard from "@/shared/ui/card/MenteeCard";
 import type { MentorMentee, MentorMenteeSummary } from "@/types/mentor";
+import { mentorMenteeApi } from "@/api/mentor/mentees";
 import { mentorSummaryApi } from "@/api/mentor/summary";
 import { MentorDashboard } from "@/pages/mentor/dashboard";
-import ActionCard from "../components/ActionCard";
-import { cn } from "@/shared/lib/cn";
-
-import MenteeList from "../components/MenteeList";
-import type { MenteeRowData } from "../components/MenteeRow";
 import CalendarPicker from "../components/CalendarPicker";
+import ModalBase from "@/shared/ui/modal/ModalBase";
+
+type Mentee = {
+  key: string;
+  menteeName: string;
+  gradeLabel: string;
+  schoolLabel: string;
+};
 
 export default function MenteesPage() {
   const navigate = useNavigate();
 
-  const [mentees, setMentees] = useState<MentorMentee[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
+  const [selectedMenteeKey, setSelectedMenteeKey] = useState<string | null>(null);
   const [summary, setSummary] = useState<MentorMenteeSummary | null>(null);
-  const [pcPage, setPcPage] = useState(0);
-  const pcPerPage = 5;
+  const [rawMentees, setRawMentees] = useState<MentorMentee[]>([]);
+  const menteeRowRef = useRef<HTMLDivElement | null>(null);
 
 
+  const mentees = useMemo<Mentee[]>(
+    () =>
+      rawMentees.map((m) => ({
+        key: String(m.id),
+        menteeName: m.name,
+        gradeLabel: `${m.grade}학년`,
+        schoolLabel: m.school,
+      })),
+    [rawMentees]
+  );
   useEffect(() => {
     let ignore = false;
-    mentorMenteeApi.getMentees()
+    mentorMenteeApi
+      .getMentees()
       .then((res) => {
         if (ignore) return;
-        setMentees(res.data ?? []);
-        if ((res.data ?? []).length > 0) {
-          setSelectedMenteeId(String(res.data[0].id));
-        }
+        setRawMentees(res.data ?? []);
       })
       .catch(() => {
         if (ignore) return;
-        setMentees([]);
+        setRawMentees([]);
       });
     return () => {
       ignore = true;
     };
   }, []);
-
+  useEffect(() => {
+    if (!selectedMenteeId && mentees.length > 0) {
+      setSelectedMenteeId(mentees[0].key);
+      setSelectedMenteeKey(mentees[0].key);
+    }
+  }, [selectedMenteeId, mentees]);
   const selectedStudent = useMemo(() => {
     if (!selectedMenteeId) return null;
-    return mentees.find((x) => String(x.id) === selectedMenteeId) ?? null;
+    return mentees.find((x) => String(x.key) === selectedMenteeId) ?? null;
   }, [selectedMenteeId, mentees]);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -103,27 +118,21 @@ export default function MenteesPage() {
     );
   }, [summary]);
 
-  const handleSelect = (row: MenteeRowData) => {
-    setSelectedMenteeId(row.id);
+
+  const onSelectMentee = (key: string) => {
+    setSelectedMenteeKey(key);
+    setSelectedMenteeId(key);
   };
 
   const [calendarOpen, setCalendarOpen] = useState(false);
-  
 
-  const pcTotalPages = useMemo(
-    () => Math.max(1, Math.ceil(mentees.length / pcPerPage)),
-    [mentees.length]
-  );
 
-  const pcVisibleMentees = useMemo(() => {
-    const start = pcPage * pcPerPage;
-    return mentees.slice(start, start + pcPerPage);
-  }, [mentees, pcPage]);
-
-  useEffect(() => {
-    setPcPage((p) => Math.min(p, pcTotalPages - 1));
-  }, [pcTotalPages]);
-
+  const scrollMentees = (dir: "left" | "right") => {
+    const el = menteeRowRef.current;
+    if (!el) return;
+    const amount = Math.max(240, Math.floor(el.clientWidth * 0.7));
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+  };
 
   return (
 
@@ -135,172 +144,110 @@ export default function MenteesPage() {
 
 
       <div className="flex flex-col gap-6">
-        {/* 위: 멘티 목록 */}
-        <section className="space-y-3">
+        {/* 멘티 선택 (Home 스타일) */}
+        <section className="rounded-3xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between">
-
-            {/* 모바일: 이전/다음 */}
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="text-xs font-bold text-gray-400">멘티 목록</div>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  const list = mentees;
-                  if (!list.length) return;
-                  const idx = Math.max(0, list.findIndex((m) => String(m.id) === selectedMenteeId));
-                  const next = idx <= 0 ? list.length - 1 : idx - 1;
-                  setSelectedMenteeId(String(list[next].id));
-                }}
+                onClick={() => scrollMentees("left")}
                 className="btn-none grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                 aria-label="이전 멘티"
               >
-                ‹
+                <FiChevronLeft className="h-4 w-4" />
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const list = mentees;
-                  if (!list.length) return;
-                  const idx = Math.max(0, list.findIndex((m) => String(m.id) === selectedMenteeId));
-                  const next = idx >= list.length - 1 ? 0 : idx + 1;
-                  setSelectedMenteeId(String(list[next].id));
-                }}
+                onClick={() => scrollMentees("right")}
                 className="btn-none grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                 aria-label="다음 멘티"
               >
-                ›
-              </button>
-            </div>
-
-            {/* PC: 페이지네이션 */}
-            <div className="hidden items-center gap-2 lg:flex">
-              <button
-                type="button"
-                onClick={() => setPcPage((p) => Math.max(0, p - 1))}
-                className="btn-none grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40"
-                aria-label="이전 멘티"
-                disabled={pcPage <= 0}
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                onClick={() => setPcPage((p) => Math.min(pcTotalPages - 1, p + 1))}
-                className="btn-none grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40"
-                aria-label="다음 멘티"
-                disabled={pcPage >= pcTotalPages - 1}
-              >
-                ›
+                <FiChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
-
-          {/* 멘티 리스트 카드 (너비 제한으로 한 줄에 길게 늘어나지 않게) */}
-          <div className="w-full max-w-2xl rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-2 gap-3 lg:hidden">
+          <div className="mt-3">
+            <div
+              ref={menteeRowRef}
+              className="flex gap-3 overflow-x-auto scroll-smooth pb-2"
+              style={{ scrollbarWidth: "none" as any }}
+            >
               {mentees.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setSelectedMenteeId(String(m.id))}
-                  className={cn(
-                    "rounded-2xl border bg-white px-4 py-3 text-left shadow-sm transition",
-                    "hover:shadow-md hover:border-violet-200",
-                    String(m.id) === selectedMenteeId
-                      ? "border-violet-300 ring-2 ring-violet-200"
-                      : "border-gray-100"
-                  )}
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                        String(m.id) === selectedMenteeId
-                          ? "bg-violet-100 text-violet-600"
-                          : "bg-gray-100 text-gray-500"
-                      )}
-                      aria-hidden
-                    >
-                      <span className="text-sm font-bold">
-                        <HiOutlineUser />
-                      </span>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-gray-500">
-                        고등학교 {m.grade}학년
-                      </div>
-                      <div className="text-sm font-semibold text-gray-900 truncate">{m.name}</div>
-                      <div className="mt-2">
-                        <span className="inline-flex max-w-full truncate rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-100">
-                          {m.school}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </button>
+                <MenteeCard
+                  key={m.key}
+                  name={m.menteeName}
+                  grade={m.gradeLabel}
+                  school={m.schoolLabel}
+                  variant="pc"
+                  selected={m.key === selectedMenteeKey}
+                  onClick={() => onSelectMentee(m.key)}
+                />
               ))}
-            </div>
-
-            {/* PC: 테이블 */}
-            <div className="hidden lg:block">
-              <MenteeList
-                rows={pcVisibleMentees.map((m) => ({
-                  id: String(m.id),
-                  name: m.name,
-                  school: m.school,
-                  grade: `고등학교 ${m.grade}학년`,
-                }))}
-                selectedId={selectedMenteeId}
-                onSelect={handleSelect}
-              />
             </div>
           </div>
         </section>
 
         {/* 아래: 대시보드(날짜 + 현황 + 액션) */}
-        <aside className="space-y-4">
+        <aside className="w-full space-y-4">
           <div className="flex flex-col gap-6">
             <div className="w-full min-w-0 space-y-4">
-              <div className="text-sm font-extrabold text-gray-900 p-4"></div>
-
-              {/* 날짜 */}
-              <div className="flex w-full max-w-3xl gap-3 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-400 ">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+              {/* 날짜 + 액션(태그 자리) */}
+              <div className="flex w-full flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100">
                     <FaRegCalendar />
                   </span>
                   <span>
-                    {selectedDate.toLocaleDateString("KR", {
+                    {selectedDate.toLocaleDateString("ko-KR", {
                       weekday: "long",
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                     })}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen((prev) => !prev)}
+                    className="ml-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50"
+                  >
+                    날짜 선택
+                  </button>
+                  <div className="mx-2 hidden h-4 w-px bg-gray-200 lg:block" />
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
+                    className="group inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100"
+                  >
+                    할 일 배정하기
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-300 text-violet-400 group-hover:text-gray-600">
+                      →
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
+                    className="group inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100"
+                  >
+                    피드백 작성하기
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-300 text-violet-400 group-hover:text-gray-600">
+                      →
+                    </span>
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setCalendarOpen((prev) => !prev)}
-                  className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50"
-                >
-                  날짜 선택
-                </button>
-
-                {calendarOpen && (
-                  <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
-                    <CalendarPicker
-                      selected={selectedDate}
-                      onSelect={(d) => setSelectedDate(d)}
-                      onClose={() => setCalendarOpen(false)}
-                    />
-                  </ModalBase>
-                )}
               </div>
-
+              {calendarOpen && (
+                <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
+                  <CalendarPicker
+                    selected={selectedDate}
+                    onSelect={(d) => setSelectedDate(d)}
+                    onClose={() => setCalendarOpen(false)}
+                  />
+                </ModalBase>
+              )}
               {/* 현황 카드 (해당 일자별) */}
-              <div className="w-full max-w-4xl rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
-                <div className="mb-1 text-sm font-extrabold text-gray-900">현황</div>
+              <div className="w-full rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+                <div className="text-xs font-bold text-gray-400">현황</div>
                 <p className="mb-4 text-xs text-gray-500">멘토링 과제 수행률을 한눈에 확인하세요</p>
                 {selectedStudent ? (
                   <MentorDashboard
@@ -316,21 +263,7 @@ export default function MenteesPage() {
                 ) : (
                   <p className="p-4 text-sm text-muted-foreground">위에서 멘티를 선택하세요.</p>
                 )}
-              </div>
-
-              {/* 액션 버튼 */}
-              <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-2">
-                <ActionCard
-                  label="할 일 배정하기"
-                  onClick={() => navigate(`/mentor/todo?menteeId=${selectedMenteeId ?? ""}`)}
-                  iconLeft={<FaTasks className="h-4 w-4" />}
-                />
-                <ActionCard
-                  label="피드백 작성하기"
-                  onClick={() => navigate(`/mentor/feedback?menteeId=${selectedMenteeId ?? ""}`)}
-                  iconLeft={<FaPen className="h-4 w-4" />}
-                />
-              </div>
+              </div>    
             </div>
           </div>
         </aside>
