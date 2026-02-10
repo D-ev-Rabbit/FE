@@ -19,6 +19,7 @@ type TaskActionModalProps = {
   onChangeTaskDraftTitle: (value: string) => void;
   onSaveTaskEdit: () => void;
   onCloseTaskEdit: () => void;
+  editTaskError?: string;
   taskDateOpen: boolean;
   taskDraftDate: string;
   onChangeTaskDraftDate: (value: string) => void;
@@ -39,6 +40,7 @@ export default function TaskActionModal({
   onChangeTaskDraftTitle,
   onSaveTaskEdit,
   onCloseTaskEdit,
+  editTaskError,
   taskDateOpen,
   taskDraftDate,
   onChangeTaskDraftDate,
@@ -125,9 +127,16 @@ export default function TaskActionModal({
             <input
               value={taskDraftTitle}
               onChange={(event) => onChangeTaskDraftTitle(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-inner focus:border-violet-400 focus:outline-none"
+              className={
+                editTaskError
+                  ? "w-full rounded-xl border border-red-400 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-inner focus:border-red-400 focus:outline-none"
+                  : "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-inner focus:border-violet-400 focus:outline-none"
+              }
               placeholder="할 일을 입력하세요."
             />
+            {editTaskError && (
+              <p className="text-sm text-red-600">{editTaskError}</p>
+            )}
           </div>
           <button
             type="button"

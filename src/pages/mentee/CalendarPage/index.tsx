@@ -243,12 +243,18 @@ export default function MenteeCalendarPage() {
     };
   }, [weekDays]);
 
+  const [addTaskError, setAddTaskError] = useState("");
+  const [editTaskError, setEditTaskError] = useState("");
   const handleCreateTodo = async () => {
-    try {
-      const title = taskDraftText.trim();
-      if (!title) return;
-      if (!selectedSubject) return;
+    const title = taskDraftText.trim();
+    if (!title) {
+      setAddTaskError("할일을 입력해주세요.");
+      return;
+    }
+    if (!selectedSubject) return;
+    setAddTaskError("");
 
+    try {
       await createMenteeTodo({
         title,
         date: currentDateKey,          //  선택된 날짜
@@ -616,11 +622,18 @@ export default function MenteeCalendarPage() {
 
       <AddTaskModal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setAddTaskError("");
+        }}
         selectedSubject={selectedSubject}
         taskDraftText={taskDraftText}
-        onChangeTaskDraftText={setTaskDraftText}
+        onChangeTaskDraftText={(v) => {
+          setTaskDraftText(v);
+          setAddTaskError("");
+        }}
         onAddTask={handleCreateTodo}
+        errorMessage={addTaskError}
       />
 
 
@@ -649,7 +662,10 @@ export default function MenteeCalendarPage() {
 
         taskEditOpen={taskEditOpen}
         taskDraftTitle={taskDraftTitle}
-        onChangeTaskDraftTitle={setTaskDraftTitle}
+        onChangeTaskDraftTitle={(v) => {
+          setTaskDraftTitle(v);
+          setEditTaskError("");
+        }}
         onSaveTaskEdit={async () => {
           if (!activeTask) return;
 
@@ -659,11 +675,21 @@ export default function MenteeCalendarPage() {
 
           if (!task) return;
 
+          const title = taskDraftTitle.trim();
+          if (!title) {
+            setEditTaskError("할일을 입력해주세요.");
+            return;
+          }
+          setEditTaskError("");
           await handleEditTodoTitle(task, taskDraftTitle);
           setTaskEditOpen(false);
           setTaskActionOpen(false);
         }}
-        onCloseTaskEdit={() => setTaskEditOpen(false)}
+        onCloseTaskEdit={() => {
+          setTaskEditOpen(false);
+          setEditTaskError("");
+        }}
+        editTaskError={editTaskError}
 
         // 날짜/내일로/시간설정은 API 스펙 더 보고 다음으로!
         taskDateOpen={taskDateOpen}

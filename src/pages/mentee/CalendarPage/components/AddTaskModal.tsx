@@ -1,5 +1,6 @@
 import ModalBase from "@/shared/ui/modal/ModalBase";
 import { HiOutlineXMark } from "react-icons/hi2";
+import { cn } from "@/shared/lib/cn";
 
 type AddTaskModalProps = {
   open: boolean;
@@ -8,6 +9,7 @@ type AddTaskModalProps = {
   taskDraftText: string;
   onChangeTaskDraftText: (value: string) => void;
   onAddTask: () => void;
+  errorMessage?: string;
 };
 
 export default function AddTaskModal({
@@ -17,6 +19,7 @@ export default function AddTaskModal({
   taskDraftText,
   onChangeTaskDraftText,
   onAddTask,
+  errorMessage,
 }: AddTaskModalProps) {
   return (
     <ModalBase open={open} onClose={onClose}>
@@ -45,9 +48,15 @@ export default function AddTaskModal({
             <input
               value={taskDraftText}
               onChange={(event) => onChangeTaskDraftText(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-inner focus:border-violet-400 focus:outline-none"
+              className={cn(
+                "w-full rounded-xl border bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-inner focus:outline-none",
+                errorMessage ? "border-red-400 focus:border-red-400" : "border-gray-200 focus:border-violet-400"
+              )}
               placeholder="할 일을 입력하세요."
             />
+            {errorMessage && (
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            )}
           </div>
 
         <button

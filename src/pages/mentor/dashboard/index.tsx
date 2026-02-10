@@ -132,8 +132,8 @@ export function MentorDashboard({ metrics, onClick, className }: MentorDashboard
         </div>
       </div>
 
-      {/* ── 3 Metric Cards (가로 막대 카드) ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* ── 3 Metric Cards (가로 막대 카드, 넓게) ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:min-w-0">
         <MetricInfoCard
           icon={<FaCheckCircle className="h-5 w-5" style={{ color: COLORS.waitingFeedback }} />}
           iconBg={`${COLORS.waitingFeedback}18`}
