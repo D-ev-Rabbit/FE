@@ -1,6 +1,16 @@
 import type { MonthCell } from "../types/calendar";
 
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+const PLANNER_DAY_START_HOUR = 5;
+
+export const getPlannerBaseDate = (now: Date = new Date()) => {
+  const base = new Date(now);
+  if (base.getHours() < PLANNER_DAY_START_HOUR) {
+    base.setDate(base.getDate() - 1);
+  }
+  base.setHours(0, 0, 0, 0);
+  return base;
+};
 
 export const formatDate = (date: Date) => {
   const year = date.getFullYear();
@@ -22,7 +32,7 @@ export const buildMonthGrid = (date: Date): MonthCell[] => {
   const firstDay = first.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
-  const today = new Date();
+  const today = getPlannerBaseDate();
   const weeksInMonth = Math.ceil((firstDay + daysInMonth) / 7);
   const totalCells = weeksInMonth * 7;
 
