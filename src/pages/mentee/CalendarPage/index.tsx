@@ -244,6 +244,7 @@ export default function MenteeCalendarPage() {
   }, [weekDays]);
 
   const [addTaskError, setAddTaskError] = useState("");
+  const [editTaskError, setEditTaskError] = useState("");
   const handleCreateTodo = async () => {
     const title = taskDraftText.trim();
     if (!title) {
@@ -661,7 +662,10 @@ export default function MenteeCalendarPage() {
 
         taskEditOpen={taskEditOpen}
         taskDraftTitle={taskDraftTitle}
-        onChangeTaskDraftTitle={setTaskDraftTitle}
+        onChangeTaskDraftTitle={(v) => {
+          setTaskDraftTitle(v);
+          setEditTaskError("");
+        }}
         onSaveTaskEdit={async () => {
           if (!activeTask) return;
 
@@ -671,11 +675,21 @@ export default function MenteeCalendarPage() {
 
           if (!task) return;
 
+          const title = taskDraftTitle.trim();
+          if (!title) {
+            setEditTaskError("할일을 입력해주세요.");
+            return;
+          }
+          setEditTaskError("");
           await handleEditTodoTitle(task, taskDraftTitle);
           setTaskEditOpen(false);
           setTaskActionOpen(false);
         }}
-        onCloseTaskEdit={() => setTaskEditOpen(false)}
+        onCloseTaskEdit={() => {
+          setTaskEditOpen(false);
+          setEditTaskError("");
+        }}
+        editTaskError={editTaskError}
 
         // 날짜/내일로/시간설정은 API 스펙 더 보고 다음으로!
         taskDateOpen={taskDateOpen}
