@@ -440,7 +440,11 @@ if (pinEl) {
                     fileApi.postMentorFeedback(file.fileId, { data: JSON.stringify(payload) })
                 )
             );
-            const updateRes = await mentorTodoApi.updateTodo(Number(submission.id), {
+            const todoId =
+                (submission as any).todoId ??
+                (submission as any).id;
+
+            const updateRes = await mentorTodoApi.updateTodo(Number(todoId), {
                 title: submission.title ?? "과제",
                 date: submission.submittedAt,
                 subject: toApiSubject(submission.subject),
@@ -448,7 +452,7 @@ if (pinEl) {
                 state: 2,
             });
             if (updateRes.data?.state !== 2) {
-                const recheck = await mentorTodoApi.getTodo(Number(submission.id));
+                const recheck = await mentorTodoApi.getTodo(Number(todoId));
                 if (recheck.data?.state !== 2) {
                     setSaveError({
                         open: true,
