@@ -467,6 +467,8 @@ export default function MenteeCalendarPage() {
             })()
           }
           onBack={() => setRecordOpen(false)}
+          onPrevDate={goToPrevDay}
+          onNextDate={goToNextDay}
           onOpenDatePicker={() => {
             setPickerMonth(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
             setDatePickerOpen(true);

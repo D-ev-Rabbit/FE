@@ -9,6 +9,7 @@ type SubjectRecordModalProps = {
   manualStart: string;
   manualEnd: string;
   manualError?: string;
+  autoError?: string;
   onClose: () => void;
   onChangeMode: (mode: "auto" | "manual") => void;
   onToggleAuto: () => void;
@@ -26,6 +27,7 @@ export default function SubjectRecordModal({
   manualStart,
   manualEnd,
   manualError,
+  autoError,
   onClose,
   onChangeMode,
   onToggleAuto,
@@ -89,6 +91,11 @@ export default function SubjectRecordModal({
               >
                 {autoRunning ? "종료" : "시작"}
               </button>
+              {autoError && (
+                <div className="mt-2 text-xs font-semibold text-rose-500">
+                  {autoError}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
