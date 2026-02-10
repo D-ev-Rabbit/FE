@@ -6,6 +6,7 @@ export type TodoItem = {
   subject: "KOREAN" | "ENGLISH" | "MATH"
   date: string // "YYYY-MM-DD"
   done: boolean
+  state?: number
 }
 
 type Props = {
@@ -23,6 +24,18 @@ const subjectBadgeClass = (s: TodoItem["subject"]) => {
   if (s === "KOREAN") return "bg-yellow-100 text-yellow-800 ring-yellow-200";
   if (s === "ENGLISH") return "bg-rose-100 text-rose-800 ring-rose-200";
   return "bg-indigo-100 text-indigo-800 ring-indigo-200";
+};
+
+const statusLabel = (state?: number) => {
+  if (state === 2) return "피드백 완료";
+  if (state === 1) return "피드백 대기";
+  return "과제 미완료";
+};
+
+const statusBadgeClass = (state?: number) => {
+  if (state === 2) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  if (state === 1) return "bg-amber-50 text-amber-700 ring-amber-200";
+  return "bg-gray-50 text-gray-600 ring-gray-200";
 };
 
 export default function TodoListTable({ items, onToggleDone: _onToggleDone, onClickRow, className }: Props) {
@@ -49,14 +62,24 @@ export default function TodoListTable({ items, onToggleDone: _onToggleDone, onCl
                         {t.title}
                       </div>
 
-                      <span
-                        className={clsx(
-                          "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-                          subjectBadgeClass(t.subject)
-                        )}
-                      >
-                        {subjectLabel(t.subject)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={clsx(
+                            "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                            subjectBadgeClass(t.subject)
+                          )}
+                        >
+                          {subjectLabel(t.subject)}
+                        </span>
+                        <span
+                          className={clsx(
+                            "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                            statusBadgeClass(t.state)
+                          )}
+                        >
+                          {statusLabel(t.state)}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-1 text-xs text-gray-500">{t.date}</div>

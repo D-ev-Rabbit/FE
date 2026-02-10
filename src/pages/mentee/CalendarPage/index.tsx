@@ -260,7 +260,7 @@ export default function MenteeCalendarPage() {
         date: currentDateKey,          //  선택된 날짜
         subject: toApiSubject(selectedSubject),      //  모달에서 선택된 과목명
         goal: "",
-        isCompleted: false,
+        state: 0,
       });
 
       //  모달 닫고 입력 초기화
@@ -290,9 +290,12 @@ export default function MenteeCalendarPage() {
     const found = todos.find((t) => t.id === todoId);
     if (!found) return;
 
+    const nextState =
+      found.state === 2 ? 2 : found.state === 0 ? 1 : 0;
+
     // 1) UI 먼저 즉시 반영(낙관적 업데이트)
     setTodos((prev) =>
-      prev.map((t) => (t.id === todoId ? { ...t, isCompleted: !t.isCompleted } : t))
+      prev.map((t) => (t.id === todoId ? { ...t, state: nextState } : t))
     );
 
     // 2) 서버 PATCH
@@ -302,13 +305,13 @@ export default function MenteeCalendarPage() {
         date: found.date,
         subject: toApiSubject(found.subject),
         goal: "",
-        isCompleted: !found.isCompleted,
+        state: nextState,
       });
     } catch (e) {
       // 실패하면 롤백
       console.error(e);
       setTodos((prev) =>
-        prev.map((t) => (t.id === todoId ? { ...t, isCompleted: found.isCompleted } : t))
+        prev.map((t) => (t.id === todoId ? { ...t, state: found.state } : t))
       );
     }
   };
@@ -345,7 +348,7 @@ export default function MenteeCalendarPage() {
       date: todo.date,
       subject: toApiSubject(todo.subject),
       goal: todo.goal ?? "",
-      isCompleted: todo.isCompleted,
+      state: todo.state,
     });
 
     await refetchTodos(currentDateKey);
@@ -368,7 +371,7 @@ export default function MenteeCalendarPage() {
         date: patch.date ?? prevTodo.date,
         subject: toApiSubject(prevTodo.subject),
         goal: "",
-        isCompleted: prevTodo.isCompleted,
+        state: prevTodo.state,
       });
 
       // 날짜 이동이면 현재 날짜의 리스트가 바뀌니까 다시 조회(안전)
@@ -428,7 +431,7 @@ export default function MenteeCalendarPage() {
         id: String(todo.id),
         todoId: todo.id,
         title: todo.title,
-        done: todo.isCompleted,
+        done: (todo.state ?? 0) > 0,
         time: "0m",
         dateKey: todo.date,
         isMine: todo.isMine,

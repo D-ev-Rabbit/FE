@@ -18,7 +18,7 @@ export type Submission = {
   subject: Subject;
   title?: string;
   goal?: string;
-  isCompleted?: boolean;
+  state?: number; // 0: 과제 미완료, 1: 피드백 대기, 2: 피드백 완료
   menteeId?: number;
   /** 목록에서 표시용: 멘티가 올린 파일(이미지) 개수 */
   fileCount?: number;

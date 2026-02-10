@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiDownload, FiChevronLeft, FiEye, FiEyeOff, FiTrash2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
@@ -13,13 +13,17 @@ import { axiosInstance } from "@/api/axiosInstance";
 import type { MenteeTodo } from "@/types/planner";
 
 const statusConfig = {
-  done: {
-    label: "완료",
-    className: "bg-emerald-100 text-emerald-600",
-  },
-  pending: {
+  0: {
     label: "미완료",
     className: "bg-gray-200 text-gray-500",
+  },
+  1: {
+    label: "피드백 대기",
+    className: "bg-amber-100 text-amber-600",
+  },
+  2: {
+    label: "피드백 완료",
+    className: "bg-emerald-100 text-emerald-600",
   },
 } as const;
 
@@ -49,6 +53,9 @@ export default function MenteeTaskDetailPage() {
     title: string;
     description?: string;
   }>({ open: false, variant: "info", title: "" });
+  const detailWrapRef = useRef<HTMLDivElement | null>(null);
+  const detailImgRef = useRef<HTMLImageElement | null>(null);
+  const [detailImageBox, setDetailImageBox] = useState({ left: 0, top: 0, width: 0, height: 0 });
 
   useEffect(() => {
     if (Number.isNaN(taskId)) return;
@@ -181,56 +188,6 @@ export default function MenteeTaskDetailPage() {
     setFeedbackOverall(overall);
   }, [task?.files]);
 
-  if (isLoadingTask) {
-    return (
-      <div className="space-y-4 pb-6">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
-        >
-          <FiChevronLeft />
-          과제로 돌아가기
-        </button>
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
-          과제를 불러오는 중입니다.
-        </div>
-      </div>
-    );
-  }
-
-  if (!task) {
-    return (
-      <div className="space-y-4 pb-6">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
-        >
-          <FiChevronLeft />
-          과제로 돌아가기
-        </button>
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
-          {taskError ?? "과제를 찾을 수 없습니다."}
-        </div>
-      </div>
-    );
-  }
-
-  const status = statusConfig[task.isCompleted ? "done" : "pending"];
-  const toApiSubject = (value?: string) => {
-    if (!value) return "";
-    if (value === "국어") return "KOREAN";
-    if (value === "영어") return "ENGLISH";
-    if (value === "수학") return "MATH";
-    return value;
-  };
-  const displaySubject = (() => {
-    if (task.subject === "KOREAN") return "국어";
-    if (task.subject === "ENGLISH") return "영어";
-    if (task.subject === "MATH") return "수학";
-    return task.subject;
-  })();
   const handleUpload = () => {
     if (!selectedFile) return;
     const tempUrl = URL.createObjectURL(selectedFile);
@@ -274,14 +231,15 @@ export default function MenteeTaskDetailPage() {
 
       let patchSucceeded = true;
       try {
+        const nextState = task.state === 2 ? 2 : 1;
         await patchMenteeTodo(task.id, {
           title: task.title,
           date: task.date,
           subject: toApiSubject(task.subject),
           goal: task.goal ?? "",
-          isCompleted: true,
+          state: nextState,
         });
-        setTask((prev) => (prev ? { ...prev, isCompleted: true } : prev));
+        setTask((prev) => (prev ? { ...prev, state: nextState } : prev));
       } catch (error) {
         const isForbidden =
           axios.isAxiosError(error) && error.response?.status === 403;
@@ -297,7 +255,7 @@ export default function MenteeTaskDetailPage() {
         variant: "success",
         title: "저장 완료",
         description: patchSucceeded
-          ? "과제가 완료로 저장되었습니다."
+          ? "피드백 대기 상태로 저장되었습니다."
           : "제출 파일이 저장되었습니다.",
       });
     } catch (error) {
@@ -353,6 +311,89 @@ export default function MenteeTaskDetailPage() {
     "type" in activeItem &&
     ((activeItem as { type?: string }).type?.toLowerCase() === "pdf" ||
       String((activeItem as { name?: string }).name ?? "").toLowerCase().endsWith(".pdf"));
+
+  const calcDetailImageBox = () => {
+    const wrap = detailWrapRef.current;
+    const img = detailImgRef.current;
+    if (!wrap) return { left: 0, top: 0, width: 0, height: 0 };
+    const wrapW = wrap.clientWidth;
+    const wrapH = wrap.clientHeight;
+    if (!img || !img.naturalWidth || !img.naturalHeight) {
+      return { left: 0, top: 0, width: wrapW, height: wrapH };
+    }
+    const scale = Math.min(wrapW / img.naturalWidth, wrapH / img.naturalHeight);
+    const renderedW = img.naturalWidth * scale;
+    const renderedH = img.naturalHeight * scale;
+    const left = (wrapW - renderedW) / 2;
+    const top = (wrapH - renderedH) / 2;
+    return { left, top, width: renderedW, height: renderedH };
+  };
+
+  const updateDetailImageBox = () => {
+    setDetailImageBox(calcDetailImageBox());
+  };
+
+  useEffect(() => {
+    updateDetailImageBox();
+    const wrap = detailWrapRef.current;
+    if (!wrap) return;
+    const ro = new ResizeObserver(updateDetailImageBox);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [activeDisplayUrl, activeImageIndex, detailOpen]);
+
+  if (isLoadingTask) {
+    return (
+      <div className="space-y-4 pb-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
+        >
+          <FiChevronLeft />
+          과제로 돌아가기
+        </button>
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+          과제를 불러오는 중입니다.
+        </div>
+      </div>
+    );
+  }
+
+  if (!task) {
+    return (
+      <div className="space-y-4 pb-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600"
+        >
+          <FiChevronLeft />
+          과제로 돌아가기
+        </button>
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+          {taskError ?? "과제를 찾을 수 없습니다."}
+        </div>
+      </div>
+    );
+  }
+
+  const status =
+    statusConfig[(task.state ?? 0) as keyof typeof statusConfig] ??
+    statusConfig[0];
+  const toApiSubject = (value?: string) => {
+    if (!value) return "";
+    if (value === "국어") return "KOREAN";
+    if (value === "영어") return "ENGLISH";
+    if (value === "수학") return "MATH";
+    return value;
+  };
+  const displaySubject = (() => {
+    if (task.subject === "KOREAN") return "국어";
+    if (task.subject === "ENGLISH") return "영어";
+    if (task.subject === "MATH") return "수학";
+    return task.subject;
+  })();
 
   return (
     <>
@@ -593,7 +634,10 @@ export default function MenteeTaskDetailPage() {
             </div>
           </div>
           <div className="mt-3 overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-3">
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gray-100">
+            <div
+              ref={detailWrapRef}
+              className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gray-100"
+            >
               {activeItem && activeDisplayUrl ? (
                 isActivePdf ? (
                   <embed
@@ -604,9 +648,11 @@ export default function MenteeTaskDetailPage() {
                   />
                 ) : (
                   <img
+                    ref={detailImgRef}
                     src={activeDisplayUrl}
                     alt="상세 피드백 이미지"
                     className="absolute inset-0 h-full w-full object-contain bg-white"
+                    onLoad={updateDetailImageBox}
                   />
                 )
               ) : (
@@ -623,13 +669,20 @@ export default function MenteeTaskDetailPage() {
                   const isSelected = activePinId === pin.id;
                   const fillClass = isSelected ? "fill-violet-600" : "fill-black/70";
                   const textClass = isSelected ? "text-violet-700" : "text-violet-700";
+                  const pinStyle =
+                    detailImageBox.width > 0 && detailImageBox.height > 0
+                      ? {
+                          left: `${detailImageBox.left + pin.x * detailImageBox.width}px`,
+                          top: `${detailImageBox.top + pin.y * detailImageBox.height}px`,
+                        }
+                      : { left: `${pin.x * 100}%`, top: `${pin.y * 100}%` };
 
                   return (
                     <button
                       key={`detail-pin-${pin.id}`}
                       type="button"
                       onClick={() => setActivePinId((prev) => (prev === pin.id ? null : pin.id))}
-                      style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
+                      style={pinStyle}
                       aria-label={`피드백 코멘트 ${pin.id}`}
                       className={cn(
                         "btn-none",

@@ -9,11 +9,10 @@ import type { MentorMentee } from "@/types/mentor";
 import { mentorTodoApi } from "@/api/mentor/todo";
 import type { MentorTodo } from "@/types/mentorTodo";
 import SubjectFilter, { type Subject as TodoSubject } from "@/pages/mentor/components/subjectFilter";
-import ModalBase from "@/shared/ui/modal/ModalBase";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 import CalendarPicker from "@/pages/mentor/components/CalendarPicker";
 import { FaRegCalendar } from "react-icons/fa";
-import { mentorPlannerApi } from "@/api/mentor/planner";
+import ModalBase from "@/shared/ui/modal/ModalBase";
 
 type Mentee = {
   key: string;
@@ -64,89 +63,12 @@ export default function FeedbackPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState<TodoSubject>("ALL");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "COMPLETED" | "INCOMPLETE">("ALL");
-  const [commentOpen, setCommentOpen] = useState(false);
-  const [commentText, setCommentText] = useState("");
-  const [isSavingComment, setIsSavingComment] = useState(false);
-  const [commentSuccessOpen, setCommentSuccessOpen] = useState(false);
-  const [isLoadingComment, setIsLoadingComment] = useState(false);
-  const [plannerComment, setPlannerComment] = useState<string | null>(null);
-  const hasPlannerComment = !!plannerComment?.trim();
-  const [errorModal, setErrorModal] = useState<{
-    open: boolean;
-    title: string;
-    description?: string;
-  }>({ open: false, title: "", description: "" });
-
-  const getErrorMessage = (err: unknown, fallback: string) => {
-    const msg =
-      (err as any)?.response?.data?.message ||
-      (err as any)?.message ||
-      fallback;
-    return typeof msg === "string" && msg.trim().length > 0 ? msg : fallback;
-  };
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "COMPLETED" | "INCOMPLETE" | "TODO_INCOMPLETE">("ALL");
+  const [incompleteModalOpen, setIncompleteModalOpen] = useState(false);
 
   const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(
     selectedDate.getDate()
   ).padStart(2, "0")}`;
-
-  const openPlannerComment = () => {
-    setCommentText(plannerComment ?? "");
-    setCommentOpen(true);
-  };
-
-  const savePlannerComment = async () => {
-    if (!selectedMenteeKey || !commentText.trim()) return;
-    setIsSavingComment(true);
-    try {
-      await mentorPlannerApi.patchPlannerComment(
-        Number(selectedMenteeKey),
-        selectedDateStr,
-        { comment: commentText.trim() }
-      );
-      setPlannerComment(commentText.trim());
-      setCommentOpen(false);
-      setCommentSuccessOpen(true);
-    } catch (err) {
-      setErrorModal({
-        open: true,
-        title: "피드백 등록 실패",
-        description: getErrorMessage(err, "플래너 피드백 등록에 실패했어요. 잠시 후 다시 시도해주세요."),
-      });
-    } finally {
-      setIsSavingComment(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedMenteeKey) return;
-
-    let cancelled = false;
-
-    const fetchPlannerComment = async () => {
-      setIsLoadingComment(true);
-      try {
-        const res = await mentorPlannerApi.getPlannerComment(
-          Number(selectedMenteeKey),
-          selectedDateStr
-        );
-        if (cancelled) return;
-        const comment = res.data?.comment;
-        setPlannerComment(comment?.trim() ? comment : null);
-      } catch {
-        if (cancelled) return;
-        setPlannerComment(null);
-      } finally {
-        if (!cancelled) setIsLoadingComment(false);
-      }
-    };
-
-    fetchPlannerComment();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedMenteeKey, selectedDateStr]);
 
   // ====== 캐러셀 상태 ======
   const [page, setPage] = useState(0);
@@ -182,6 +104,18 @@ export default function FeedbackPage() {
     return value; // KOREAN | ENGLISH | MATH
   };
 
+  const stateLabel = (state?: number) => {
+    if (state === 2) return "피드백 완료";
+    if (state === 1) return "피드백 대기";
+    return "과제 미완료";
+  };
+
+  const stateBadgeClass = (state?: number) => {
+    if (state === 2) return "text-emerald-700 ring-emerald-200";
+    if (state === 1) return "text-amber-700 ring-amber-200";
+    return "text-gray-600 ring-gray-200";
+  };
+
   const onSelectMentee = (key: string) => {
     setSelectedMenteeKey(key);
     setSelectedSubmission(null);
@@ -214,8 +148,14 @@ export default function FeedbackPage() {
       .getMenteeTodos(Number(selectedMenteeKey), {
         date: selectedDateStr,
         subject: subjectToApi(subjectFilter),
-        isCompleted:
-          statusFilter === "ALL" ? undefined : statusFilter === "COMPLETED",
+        state:
+          statusFilter === "ALL"
+            ? undefined
+            : statusFilter === "COMPLETED"
+              ? 2
+              : statusFilter === "INCOMPLETE"
+                ? 1
+                : 0,
       })
       .then((res) => {
         if (ignore) return;
@@ -226,7 +166,7 @@ export default function FeedbackPage() {
           submittedAt: t.date,
           subject: toSubject(t.subject),
           title: t.title,
-          isCompleted: t.isCompleted,
+          state: t.state ?? 0,
           menteeId: Number(selectedMenteeKey),
           files: [],
           fileCount: t.fileCount ?? 0,
@@ -287,8 +227,8 @@ export default function FeedbackPage() {
   return (
     <div className="w-full">
       <div className="mb-5">
-        <div className="text-base font-extrabold text-violet-900">피드백</div>
-        <div className="mt-2 text-sm text-gray-500">멘티를 선택하고 과제 및 플래너를 피드백 할 수 있어요.</div>
+        <div className="text-base font-extrabold text-violet-900">과제 피드백</div>
+        <div className="mt-2 text-sm text-gray-500">멘티를 선택하고 과제를 피드백 할 수 있어요.</div>
       </div>
 
       {/* 멘티 선택 (Home 스타일) */}
@@ -386,6 +326,7 @@ export default function FeedbackPage() {
                       { key: "ALL", label: "전체" },
                       { key: "COMPLETED", label: "피드백 완료" },
                       { key: "INCOMPLETE", label: "피드백 대기" },
+                      { key: "TODO_INCOMPLETE", label: "과제 미완료" },
                     ].map((item) => {
                       const active = statusFilter === item.key;
                       return (
@@ -486,6 +427,10 @@ export default function FeedbackPage() {
                             key={`${s.id}-${s.submittedAt}-${idx}`}
                             type="button"
                             onClick={() => {
+                              if ((s.state ?? 0) === 0) {
+                                setIncompleteModalOpen(true);
+                                return;
+                              }
                               mentorTodoApi
                                 .getTodo(Number(s.id))
                                 .then((res) => {
@@ -506,7 +451,7 @@ export default function FeedbackPage() {
                                     submittedAt: detail?.date ?? s.submittedAt,
                                     title: detail?.title ?? s.title,
                                     goal: detail?.goal ?? s.goal,
-                                    isCompleted: detail?.isCompleted ?? s.isCompleted,
+                                    state: detail?.state ?? s.state,
                                     files,
                                   });
                                 })
@@ -549,10 +494,10 @@ export default function FeedbackPage() {
                                 className={cn(
                                   "absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur-sm",
                                   "bg-white/80",
-                                  s.isCompleted ? "text-emerald-700 ring-emerald-200" : "text-amber-700 ring-amber-200"
+                                  stateBadgeClass(s.state)
                                 )}
                               >
-                                {s.isCompleted ? "피드백 완료" : "피드백 대기"}
+                                {stateLabel(s.state)}
                               </div>
                             </div>
 
@@ -574,52 +519,12 @@ export default function FeedbackPage() {
               </div>
 
               <div className="mt-6 rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
-                과제를 클릭하면 이미지에 핀 코멘트를 남기고 전체 코멘트를 저장할 수 있어요.
+                과제를 클릭하면 이미지에 핀 코멘트를 남기고 전체 코멘트를 저장할 수 있어요.("과제 미완료"인 과제는 피드백할 수 없어요.)
               </div>
             </>
           );
         })()}
       </section>
-      {/* 플래너 피드백 */}
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="text-xs font-bold text-gray-400">플래너 피드백</div>
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
-                isLoadingComment
-                  ? "border-gray-200 bg-gray-50 text-gray-400"
-                  : hasPlannerComment
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700"
-              )}
-            >
-              {isLoadingComment ? "불러오는 중..." : hasPlannerComment ? "작성완료" : "미작성"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={openPlannerComment}
-            disabled={!selectedMenteeKey || isLoadingComment}
-            className="rounded-full border border-violet-200 bg-violet-50 px-4 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-50"
-          >
-            {hasPlannerComment ? "피드백 수정하기" : "플래너 피드백하기"}
-          </button>
-        </div>
-        <div className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
-          {isLoadingComment ? (
-            <span className="text-gray-400">불러오는 중...</span>
-          ) : hasPlannerComment ? (
-            plannerComment
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
-              아직 작성된 피드백이 없어요.
-            </div>
-          )}
-        </div>
-      </div>
-
       <ModalBase open={calendarOpen} onClose={() => setCalendarOpen(false)}>
         <CalendarPicker
           selected={selectedDate}
@@ -633,60 +538,18 @@ export default function FeedbackPage() {
         submission={selectedSubmission}
         onClose={() => setSelectedSubmission(null)}
         onSaved={(id) => {
-          setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, isCompleted: true } : s)));
-          setSelectedSubmission((prev) => (prev && prev.id === id ? { ...prev, isCompleted: true } : prev));
+          setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, state: 2 } : s)));
+          setSelectedSubmission((prev) => (prev && prev.id === id ? { ...prev, state: 2 } : prev));
         }}
       />
 
-      <ModalBase open={commentOpen} onClose={() => setCommentOpen(false)}>
-        <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl">
-          <div className="text-lg font-bold text-gray-900">오늘의 플래너 피드백</div>
-          <div className="mt-2 text-xs text-gray-500">
-            선택한 날짜({selectedDateStr})에 대한 코멘트를 남겨주세요.
-          </div>
-          <textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="오늘의 학습 피드백을 입력하세요."
-            className="mt-4 h-40 w-full resize-none rounded-2xl border border-gray-200 p-4 text-sm outline-none focus:border-violet-300"
-          />
-          <div className="mt-5 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setCommentOpen(false)}
-              className="h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={savePlannerComment}
-              disabled={isSavingComment || !commentText.trim() || !selectedMenteeKey}
-              className="h-10 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-600/90 disabled:opacity-40"
-            >
-              {isSavingComment ? "저장 중..." : "저장"}
-            </button>
-          </div>
-        </div>
-      </ModalBase>
-
       <ConfirmModal
-        open={errorModal.open}
-        variant="error"
-        title={errorModal.title}
-        description={errorModal.description}
-        onCancel={() => setErrorModal((prev) => ({ ...prev, open: false }))}
-        onConfirm={() => setErrorModal((prev) => ({ ...prev, open: false }))}
-        showCancel={false}
-        confirmText="확인"
-      />
-      <ConfirmModal
-        open={commentSuccessOpen}
-        variant="success"
-        title="피드백 저장 완료"
-        description="멘토 플래너 피드백이 저장되었습니다."
-        onCancel={() => setCommentSuccessOpen(false)}
-        onConfirm={() => setCommentSuccessOpen(false)}
+        open={incompleteModalOpen}
+        variant="info"
+        title="과제 제출 전"
+        description="해당 과제는 과제 제출 전입니다. 멘티에게 과제 제출을 요청하세요."
+        onCancel={() => setIncompleteModalOpen(false)}
+        onConfirm={() => setIncompleteModalOpen(false)}
         showCancel={false}
         confirmText="확인"
       />

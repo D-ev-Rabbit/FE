@@ -107,7 +107,7 @@ export default function MentorTasksPage() {
           subject: subjectFromApi(t.subject),
           menteeId: String(selectedMenteeId),
           date: t.date,
-          feedbackDone: !!t.isCompleted,
+          feedbackDone: t.state === 2,
         }));
         setTodos(items);
       })

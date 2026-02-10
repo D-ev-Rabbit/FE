@@ -9,7 +9,7 @@ export const mentorTodoApi = {
   // GET /api/mentor/mentees/{menteeId}/todos
   getMenteeTodos: (
     menteeId: number,
-    params?: { date?: string; isCompleted?: boolean; subject?: string }
+    params?: { date?: string; state?: number; subject?: string }
   ) => {
     return axiosInstance.get<MentorTodo[]>(
       `/api/mentor/mentees/${menteeId}/todos`,
