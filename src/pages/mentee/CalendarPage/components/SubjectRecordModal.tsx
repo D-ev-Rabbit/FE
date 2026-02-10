@@ -1,4 +1,5 @@
 import ModalBase from "@/shared/ui/modal/ModalBase";
+import { HiOutlineClock } from "react-icons/hi2";
 
 type SubjectRecordModalProps = {
   open: boolean;
@@ -16,6 +17,12 @@ type SubjectRecordModalProps = {
   onChangeManualStart: (value: string) => void;
   onChangeManualEnd: (value: string) => void;
   onSaveManual: () => void;
+};
+
+const formatTimeDisplay = (value: string) => {
+  const [h, m] = value.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return value;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
 export default function SubjectRecordModal({
@@ -76,7 +83,7 @@ export default function SubjectRecordModal({
           </div>
         </div>
 
-        <div className="mt-4 h-[180px]">
+        <div className="mt-4">
           {mode === "auto" ? (
             <div className="rounded-2xl bg-gray-50 px-4 py-5 text-center">
               <div className="text-3xl font-semibold text-gray-800">{elapsedLabel}</div>
@@ -99,24 +106,38 @@ export default function SubjectRecordModal({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs font-semibold text-gray-500">시작</div>
-                  <input
-                    type="time"
-                    value={manualStart}
-                    onChange={(event) => onChangeManualStart(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                  />
+                  <div className="relative mt-1">
+                    <div className="flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 text-[13px] font-semibold text-gray-800">
+                      <span>{formatTimeDisplay(manualStart)}</span>
+                      <HiOutlineClock className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="time"
+                      value={manualStart}
+                      onChange={(event) => onChangeManualStart(event.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      aria-label="시작 시간"
+                    />
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-gray-500">종료</div>
-                  <input
-                    type="time"
-                    value={manualEnd}
-                    onChange={(event) => onChangeManualEnd(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                  />
+                  <div className="relative mt-1">
+                    <div className="flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 text-[13px] font-semibold text-gray-800">
+                      <span>{formatTimeDisplay(manualEnd)}</span>
+                      <HiOutlineClock className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="time"
+                      value={manualEnd}
+                      onChange={(event) => onChangeManualEnd(event.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      aria-label="종료 시간"
+                    />
+                  </div>
                 </div>
               </div>
               {manualError && (
