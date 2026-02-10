@@ -284,7 +284,7 @@ export default function FeedbackPage() {
     <div className="w-full">
       <div className="mb-5">
         <div className="text-base font-extrabold text-violet-900">피드백</div>
-        <div className="mt-2 text-sm text-gray-500">멘티를 선택하고 과제를 선택하면 피드백 모달이 열려요.</div>
+        <div className="mt-2 text-sm text-gray-500">멘티를 선택하고 과제 및 플래너를 피드백 할 수 있어요.</div>
       </div>
 
       {/* 멘티 선택 (Home 스타일) */}
@@ -432,7 +432,7 @@ export default function FeedbackPage() {
               <div ref={containerRef} className="relative mt-3">
                 {items.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
-                    해당 조건의 과제가 없습니다.
+                    해당 조건의 과제가 없어요.
                   </div>
                 ) : (
                   <>
