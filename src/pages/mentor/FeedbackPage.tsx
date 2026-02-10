@@ -75,10 +75,13 @@ export default function FeedbackPage() {
   const subjectBadge = (subject: string) => {
     switch (subject) {
       case "KOREAN":
+      case "국어":
         return "bg-rose-50 text-rose-700 ring-rose-200";
       case "MATH":
+      case "수학":
         return "bg-blue-50 text-blue-700 ring-blue-200";
       case "ENGLISH":
+      case "영어":
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
       default:
         return "bg-gray-50 text-gray-700 ring-gray-200";
@@ -109,6 +112,7 @@ export default function FeedbackPage() {
     const amount = Math.max(240, Math.floor(el.clientWidth * 0.7));
     el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
   };
+  
 
   useEffect(() => {
     if (mentees.length === 0) return;
