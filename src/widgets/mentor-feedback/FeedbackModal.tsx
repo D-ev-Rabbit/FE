@@ -57,6 +57,7 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
 
     // 다운로드 API URL → Blob URL (Bearer 인증으로 이미지 로드)
     const [blobUrlsByUrl, setBlobUrlsByUrl] = useState<Record<string, string>>({});
+    const prevSubmissionIdRef = useRef<string | null>(null);
 
     // 이동 모드에서는 바텀시트 닫기
     useEffect(() => {
@@ -116,24 +117,28 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
     useEffect(() => {
         if (!open || !submission) return;
         let ignore = false;
+        const isNewSubmission = prevSubmissionIdRef.current !== submission.id;
+        prevSubmissionIdRef.current = submission.id;
 
-        setActiveImageIdx(0);
-        setMode("pin");
-        setOverallComment("");
+        if (isNewSubmission) {
+            setActiveImageIdx(0);
+            setMode("pin");
+            setOverallComment("");
 
-        setPinsByImage({});
-        setSelectedNumber(null);
-        setEditingNumber(null);
-        setEditingText("");
-        setDraggingNumber(null);
+            setPinsByImage({});
+            setSelectedNumber(null);
+            setEditingNumber(null);
+            setEditingText("");
+            setDraggingNumber(null);
 
-        setDirty(false);
-        setAskLeave(false);
-        setSaving(false);
-        setSaved(false);
-        setShowPins(true);
+            setDirty(false);
+            setAskLeave(false);
+            setSaving(false);
+            setSaved(false);
+            setShowPins(true);
 
-        setIsMobileSheetOpen(false);
+            setIsMobileSheetOpen(false);
+        }
 
         if (submission.files.length > 0) {
             Promise.allSettled(submission.files.map((file) => fileApi.getMentorFeedback(file.fileId)))
@@ -174,7 +179,7 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         return () => {
             ignore = true;
         };
-    }, [open, submission]);
+    }, [open, submission?.id]);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {

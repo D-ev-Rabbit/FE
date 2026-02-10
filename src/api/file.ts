@@ -39,7 +39,7 @@ export const fileApi = {
     return uploadAxios.get<MentorTodoFile[]>(`/api/files/todos/${todoId}/mentor`);
   },
   /** Bearer 토큰으로 파일 바디 fetch (이미지 미리보기 등) */
-  fetchFileBlob: (url: string) => {
+  fetchFileBlob: async (url: string) => {
     const token = localStorage.getItem("accessToken");
     const base =
       (uploadAxios.defaults.baseURL ?? "") ||
@@ -47,12 +47,21 @@ export const fileApi = {
       (typeof window !== "undefined" ? window.location.origin : "");
     const path = url.startsWith("http") ? "" : url.replace(/^\//, "");
     const fullUrl = url.startsWith("http") ? url : [base.replace(/\/$/, ""), path].filter(Boolean).join("/");
-    return fetch(fullUrl, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }).then((res) => {
-      if (!res.ok) throw new Error("File fetch failed");
-      return res.blob();
-    });
+
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const res = await fetch(fullUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) return res.blob();
+      if (attempt === 0) {
+        await sleep(300);
+        continue;
+      }
+      throw new Error("File fetch failed");
+    }
+    throw new Error("File fetch failed");
   },
   postMentorFeedback: (fileId: number, body: { data: string }) => {
     return uploadAxios.post<{ id: number; data: string }>(`/api/mentor/files/${fileId}/feedback`, body);

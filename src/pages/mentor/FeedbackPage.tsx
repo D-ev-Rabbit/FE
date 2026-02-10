@@ -13,6 +13,7 @@ import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
 import CalendarPicker from "@/pages/mentor/components/CalendarPicker";
 import { FaRegCalendar } from "react-icons/fa";
 import ModalBase from "@/shared/ui/modal/ModalBase";
+import { fileApi } from "@/api/file";
 
 type Mentee = {
   key: string;
@@ -60,6 +61,8 @@ export default function FeedbackPage() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const previewLoadedRef = useRef<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState<TodoSubject>("ALL");
@@ -142,6 +145,11 @@ export default function FeedbackPage() {
       setSubmissions([]);
       return;
     }
+    previewLoadedRef.current = new Set();
+    setPreviewUrls((prev) => {
+      Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+      return {};
+    });
     let ignore = false;
     setIsLoadingSubmissions(true);
     mentorTodoApi
@@ -185,6 +193,45 @@ export default function FeedbackPage() {
       ignore = true;
     };
   }, [selectedMenteeKey, selectedMentee, selectedDateStr, subjectFilter, statusFilter]);
+
+  useEffect(() => {
+    const items = submissions;
+    if (items.length === 0) return;
+
+    const totalPages = Math.max(1, Math.ceil(items.length / perPage));
+    const start = page * perPage;
+    const visible = items.slice(start, start + perPage);
+
+    let cancelled = false;
+
+    const loadPreviews = async () => {
+      await Promise.all(
+        visible.map(async (s) => {
+          if (previewLoadedRef.current.has(s.id)) return;
+          if ((s.fileCount ?? 0) <= 0) return;
+          try {
+            const filesRes = await fileApi.getMentorTodoFiles(Number(s.id));
+            const files = filesRes.data ?? [];
+            const first = files.find((f) => !String(f.type ?? "").toLowerCase().includes("pdf")) ?? files[0];
+            if (!first?.url) return;
+            const blob = await fileApi.fetchFileBlob(first.url);
+            if (cancelled) return;
+            const blobUrl = URL.createObjectURL(blob);
+            previewLoadedRef.current.add(s.id);
+            setPreviewUrls((prev) => ({ ...prev, [s.id]: blobUrl }));
+          } catch {
+            // ignore
+          }
+        })
+      );
+    };
+
+    loadPreviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [submissions, perPage, page]);
 
   // 화면 크기에 따라 "한 줄에 보이는 카드 개수" 자동 계산
   useEffect(() => {
@@ -472,9 +519,9 @@ export default function FeedbackPage() {
                             )}
                           >
                             <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-gray-100">
-                              {s.files?.[0]?.url ? (
+                              {previewUrls[s.id] ? (
                                 <img
-                                  src={s.files?.[0]?.url}
+                                  src={previewUrls[s.id]}
                                   alt=""
                                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                                 />
