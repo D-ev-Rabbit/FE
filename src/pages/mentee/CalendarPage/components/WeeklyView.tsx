@@ -6,7 +6,7 @@ import {
 } from "react-icons/hi2";
 import { cn } from "@/shared/lib/cn";
 import type { SubjectGroup, Task } from "../types/calendar";
-import { dayLabels, formatMonthLabel } from "../utils/date";
+import { dayLabels, formatMonthLabel, getPlannerBaseDate } from "../utils/date";
 
 const SUBJECT_BADGE_STYLES: Record<
   string,
@@ -100,10 +100,11 @@ export default function WeeklyView({
         </div>
         <div className="mt-3 grid grid-cols-7 gap-2 text-center">
           {weekDays.map((day) => {
+            const baseDate = getPlannerBaseDate();
             const isToday =
-              day.getFullYear() === new Date().getFullYear() &&
-              day.getMonth() === new Date().getMonth() &&
-              day.getDate() === new Date().getDate();
+              day.getFullYear() === baseDate.getFullYear() &&
+              day.getMonth() === baseDate.getMonth() &&
+              day.getDate() === baseDate.getDate();
             const isSelected =
               day.getFullYear() === currentDate.getFullYear() &&
               day.getMonth() === currentDate.getMonth() &&

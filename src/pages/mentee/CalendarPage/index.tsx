@@ -9,7 +9,7 @@ import MonthlyView from "./components/MonthlyView";
 import TaskActionModal from "./components/TaskActionModal";
 import WeeklyView from "./components/WeeklyView";
 import useCalendarState from "./hooks/useCalendarState";
-import { buildMonthGrid, formatMonthLabel } from "./utils/date";
+import { buildMonthGrid, formatMonthLabel, getPlannerBaseDate } from "./utils/date";
 
 import { createMenteeTodo, deleteMenteeTodo, getMenteeTodos, patchMenteeTodo } from "@/api/mentee/todo";
 import type { MenteeTodo, SubjectGroup } from "@/types/planner";
@@ -457,11 +457,14 @@ export default function MenteeCalendarPage() {
           subjects={dailySubjects}
           dateKey={currentDateKey}
           readOnly={
-            !(
-              currentDate.getFullYear() === new Date().getFullYear() &&
-              currentDate.getMonth() === new Date().getMonth() &&
-              currentDate.getDate() === new Date().getDate()
-            )
+            !(() => {
+              const baseDate = getPlannerBaseDate();
+              return (
+                currentDate.getFullYear() === baseDate.getFullYear() &&
+                currentDate.getMonth() === baseDate.getMonth() &&
+                currentDate.getDate() === baseDate.getDate()
+              );
+            })()
           }
           onBack={() => setRecordOpen(false)}
           onOpenDatePicker={() => {

@@ -6,6 +6,7 @@ import {
   formatDate,
   formatDateInput,
   formatMonthLabel,
+  getPlannerBaseDate,
   parseDateInput,
 } from "../utils/date";
 
@@ -30,8 +31,8 @@ const INITIAL_SUBJECTS: SubjectGroup[] = [
 const INITIAL_GOALS: MonthGoal[] = [];
 
 export default function useCalendarState() {
-  const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const [currentDate, setCurrentDate] = useState(() => getPlannerBaseDate());
+  const [currentMonth, setCurrentMonth] = useState(() => getPlannerBaseDate());
   const [viewMode, setViewMode] = useState<ViewMode>("daily");
   const [subjects, setSubjects] = useState<SubjectGroup[]>(INITIAL_SUBJECTS);
   const [openSubjects, setOpenSubjects] = useState<Record<string, boolean>>(

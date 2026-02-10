@@ -107,11 +107,47 @@ const formatLocalDateTime = (date: Date) => {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
 };
 
+const DAY_START_MINUTES = 5 * 60;
+const PLANNER_DAY_START_HOUR = 5;
+
+const toDateKey = (date: Date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const addDaysToDateKey = (dateKey: string, amount: number) => {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  dt.setDate(dt.getDate() + amount);
+  return toDateKey(dt);
+};
+
+const getNextPlannerBoundary = (date: Date) => {
+  const boundary = new Date(date);
+  boundary.setHours(PLANNER_DAY_START_HOUR, 0, 0, 0);
+  if (date >= boundary) {
+    boundary.setDate(boundary.getDate() + 1);
+  }
+  return boundary;
+};
+
+const toPlannerDateKeyFromIso = (iso: string) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  const baseKey = toDateKey(date);
+  return minutes < DAY_START_MINUTES ? addDaysToDateKey(baseKey, -1) : baseKey;
+};
+
 const toIsoFromDateTime = (dateKey: string, time: string) => {
   const [h, min] = time.split(":").map(Number);
+  const minutes = (h ?? 0) * 60 + (min ?? 0);
   const hh = String(h ?? 0).padStart(2, "0");
   const mi = String(min ?? 0).padStart(2, "0");
-  return `${dateKey}T${hh}:${mi}:00`;
+  const baseKey = minutes < DAY_START_MINUTES ? addDaysToDateKey(dateKey, 1) : dateKey;
+  return `${baseKey}T${hh}:${mi}:00`;
 };
 
 const toRecordItem = (session: StudySession): RecordItem | null => {
@@ -131,9 +167,9 @@ const toRecordsByDate = (sessions: StudySession[]) =>
   sessions.reduce<Record<string, RecordItem[]>>((acc, session) => {
     const item = toRecordItem(session);
     if (!item) return acc;
-    const dateKey = session.date;
-    const next = acc[dateKey] ?? [];
-    acc[dateKey] = [item, ...next];
+    const plannerDateKey = toPlannerDateKeyFromIso(session.startAt) ?? session.date;
+    const next = acc[plannerDateKey] ?? [];
+    acc[plannerDateKey] = [item, ...next];
     return acc;
   }, {});
 
@@ -161,7 +197,7 @@ const parseClockToMinutes = (value: string) => {
 };
 
 const toTimelineMinutes = (minutes: number) => {
-  let value = minutes;
+  let value = minutes - DAY_START_MINUTES;
   while (value < 0) value += 1440;
   return value % 1440;
 };
@@ -183,10 +219,11 @@ const calcDurationMinutes = (start: string, end: string) => {
   if (Number.isNaN(sh) || Number.isNaN(sm) || Number.isNaN(eh) || Number.isNaN(em)) {
     return 0;
   }
-  const startMinutes = sh * 60 + sm;
-  const endMinutes = eh * 60 + em;
+  if (sh === eh && sm === em) return 0;
+  const startMinutes = toTimelineMinutes(sh * 60 + sm);
+  const endMinutes = toTimelineMinutes(eh * 60 + em);
   const diff = endMinutes - startMinutes;
-  return diff > 0 ? diff : 0;
+  return diff > 0 ? diff : diff + 1440;
 };
 
 export default function DailyRecordPage({
@@ -206,8 +243,8 @@ export default function DailyRecordPage({
   const [autoElapsedSec, setAutoElapsedSec] = useState(0);
   const [runningSubjectId, setRunningSubjectId] = useState<string | null>(null);
   const [runningSessionId, setRunningSessionId] = useState<number | null>(null);
-  const [manualStart, setManualStart] = useState("09:00");
-  const [manualEnd, setManualEnd] = useState("09:50");
+  const [manualStart, setManualStart] = useState("05:00");
+  const [manualEnd, setManualEnd] = useState("05:50");
   const [manualError, setManualError] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
@@ -312,9 +349,16 @@ export default function DailyRecordPage({
 
   useEffect(() => {
     if (!dateKey) return;
-    menteeStudySessionApi.getByDate(dateKey)
-      .then((res) => {
-        const sessions = res.data ?? [];
+    const nextDateKey = addDaysToDateKey(dateKey, 1);
+    Promise.all([
+      menteeStudySessionApi.getByDate(dateKey),
+      menteeStudySessionApi.getByDate(nextDateKey),
+    ])
+      .then(([currentRes, nextRes]) => {
+        const sessions = [
+          ...(currentRes.data ?? []),
+          ...(nextRes.data ?? []),
+        ];
         setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(sessions)));
         const running = sessions.find((session) => !session.endAt && session.mode === "AUTO");
         if (running && !autoRunning && !stopRequestRef.current) {
@@ -390,17 +434,34 @@ export default function DailyRecordPage({
     }
     stopRequestRef.current = true;
     const end = new Date();
+    const subjectName = subjects.find((subject) => subject.id === runningSubjectId)?.name ?? runningSubjectId;
+    const boundary = getNextPlannerBoundary(autoStart);
+    const shouldSplit = autoStart < boundary && end > boundary;
+    const stopEnd = shouldSplit ? boundary : end;
+    const manualStart = boundary;
+    const manualEnd = end;
     // 기록은 중지 응답에서만 반영하여 중복 생성 방지
     const finalizeStop = (sessionId: number) => {
-      menteeStudySessionApi.stop(sessionId, { endAt: formatLocalDateTime(end) })
+      menteeStudySessionApi.stop(sessionId, { endAt: formatLocalDateTime(stopEnd) })
         .then((res) => {
           setRecordsByDate((prev) => mergeRecordsByDate(prev, toRecordsByDate(res.data.sessions)));
-          onRefreshSessions?.();
+          if (shouldSplit && manualEnd > manualStart) {
+            return menteeStudySessionApi.createManual({
+              subject: subjectName,
+              startAt: formatLocalDateTime(manualStart),
+              endAt: formatLocalDateTime(manualEnd),
+            }).then((manualRes) => {
+              setRecordsByDate((prev) =>
+                mergeRecordsByDate(prev, toRecordsByDate(manualRes.data.sessions))
+              );
+            });
+          }
         })
         .catch(() => {
           // ignore to keep UI responsive
         })
         .finally(() => {
+          onRefreshSessions?.();
           startRequestRef.current = null;
           stopRequestRef.current = false;
         });
@@ -516,11 +577,11 @@ export default function DailyRecordPage({
       const start = parseClockToMinutes(record.startTime);
       const end = parseClockToMinutes(record.endTime);
       if (start === null || end === null) return false;
-      let s = start;
-      let e = end;
+      let s = toTimelineMinutes(start);
+      let e = toTimelineMinutes(end);
       if (e <= s) e += 1440;
-      let ns = newStart;
-      let ne = newEnd;
+      let ns = toTimelineMinutes(newStart);
+      let ne = toTimelineMinutes(newEnd);
       if (ne <= ns) ne += 1440;
       return isOverlap(ns, ne, s, e);
     });
@@ -547,7 +608,10 @@ export default function DailyRecordPage({
   };
   const rowHeight = 18;
   const totalRows = 24;
-  const hourLabels = Array.from({ length: 24 }, (_, index) => index);
+  const hourLabels = Array.from(
+    { length: 24 },
+    (_, index) => ((DAY_START_MINUTES / 60 + index) % 24)
+  );
 
   return (
     <div className="space-y-6 pb-6 pt-1">
