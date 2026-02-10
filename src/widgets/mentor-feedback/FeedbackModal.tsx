@@ -336,7 +336,9 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
 if (pinEl) {
   const n = Number(pinEl.getAttribute("data-pin-number"));
   if (!Number.isFinite(n)) return;
-  setSelectedNumber(n);
+    setSelectedNumber(n);
+    setEditingNumber(null);
+    setEditingText("");
 
   if (mode === "pin") {
     requestAnimationFrame(() => setIsMobileSheetOpen(true));
@@ -363,15 +365,16 @@ if (pinEl) {
     };
 
     const toApiSubject = (value: Submission["subject"]) => {
-        if (value === "국어") return "국어";
-        if (value === "영어") return "영어";
-        if (value === "수학") return "수학";
+        if (value === "국어") return "KOREAN";
+        if (value === "영어") return "ENGLISH";
+        if (value === "수학") return "MATH";
         return value;
     };
 
     const save = async () => {
         if (!submission) return;
         setSaving(true);
+
         try {
             if (submission.files.length === 0) {
                 setSaveError({
@@ -381,13 +384,42 @@ if (pinEl) {
                 });
                 return;
             }
+            const pinsSnapshot: PinsByImage =
+                editingNumber !== null
+                    ? {
+                        ...pinsByImage,
+                        [activeImageIdx]: (pinsByImage[activeImageIdx] ?? []).map((p) =>
+                        p.number === editingNumber ? { ...p, text: editingText } : p
+                        ),
+                    }
+                    : pinsByImage;
+
+            if (editingNumber !== null) {
+                setPinsByImage(pinsSnapshot);
+                setEditingNumber(null);
+                setDirty(true);
+            }
+            
+            const hasEmptyPinText = Object.values(pinsSnapshot).some((arr) =>
+                (arr ?? []).some((p) => !(p.text ?? "").trim())
+                );
+
+                if (hasEmptyPinText) {
+                setSaveError({
+                    open: true,
+                    title: "저장 실패",
+                    description: "핀 코멘트가 비어있는 항목이 있어요. 모든 핀에 코멘트를 작성해주세요.",
+                });
+                return;
+            }
+
             const pinsByImagePayload = Array.from({ length: submission.files.length }).map((_, index) => ({
                 imageIndex: index,
-                pins: (pinsByImage[index] ?? []).map((p) => ({
+                pins: (pinsSnapshot[index] ?? []).map((p) => ({
                     number: p.number,
                     x: p.x,
                     y: p.y,
-                    text: p.text ?? "",
+                    text: (p.text ?? "").trim(),
                 })),
             }));
 
@@ -475,7 +507,11 @@ if (pinEl) {
                                 <div className="flex items-start gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setSelectedNumber(p.number)}
+                                        onClick={() => {
+                                            setSelectedNumber(p.number);
+                                            setEditingNumber(null);
+                                            setEditingText("");
+                                        }}
                                         className={cn(
                                             "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold",
                                             isSel ? "bg-violet-600 text-white" : "bg-gray-900 text-white"
@@ -716,7 +752,7 @@ if (pinEl) {
                         >
                             {isPdf ? (
                                 <embed
-                                    src={imgSrc}
+                                    src={imgSrc || undefined}
                                     type="application/pdf"
                                     className="h-full w-full min-h-0"
                                     title={activeFile?.name ?? "PDF"}
@@ -770,6 +806,8 @@ if (pinEl) {
                                                 if (mode === "pan") return;
                                                 e.stopPropagation();
                                                 setSelectedNumber(p.number);
+                                                setEditingNumber(null);
+                                                setEditingText("");
                                                 setIsMobileSheetOpen(true);
                                             }}
                                             style={pinStyle}

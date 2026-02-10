@@ -17,7 +17,7 @@ export default function ActionCard({ label, onClick, iconLeft }: ActionCardProps
         {label}
       </div>
       <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-400 group-hover:text-gray-600">
-        →
+        {iconLeft ?? "→"}
       </span>
 
       <div className="mt-3 h-px w-full bg-gray-100" />
