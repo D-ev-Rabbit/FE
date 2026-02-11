@@ -72,11 +72,12 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
     // submission 파일 URL들을 Bearer로 fetch → blob URL 캐시
     useEffect(() => {
         if (!open || !submission?.files?.length) return;
-        const urls = submission.files.map((f) => f.url).filter(Boolean);
         let revoked = false;
-        urls.forEach((url) => {
+        submission.files.forEach((file) => {
+            const url = file.url;
+            if (!url) return;
             fileApi
-                .fetchFileBlob(url)
+                .fetchFileBlob(url, file.fileId)
                 .then((blob) => {
                     if (revoked) return;
                     const blobUrl = URL.createObjectURL(blob);
@@ -376,6 +377,8 @@ if (pinEl) {
         return value;
     };
 
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
     const save = async () => {
         if (!submission) return;
         setSaving(true);
@@ -443,24 +446,42 @@ if (pinEl) {
             const todoId =
                 (submission as any).todoId ??
                 (submission as any).id;
-
-            const updateRes = await mentorTodoApi.updateTodo(Number(todoId), {
-                title: submission.title ?? "과제",
-                date: submission.submittedAt,
-                subject: toApiSubject(submission.subject),
-                goal: submission.goal ?? "",
-                state: 2,
-            });
-            if (updateRes.data?.state !== 2) {
-                const recheck = await mentorTodoApi.getTodo(Number(todoId));
-                if (recheck.data?.state !== 2) {
-                    setSaveError({
-                        open: true,
-                        title: "상태 업데이트 실패",
-                        description: "해결 완료 상태로 변경되지 않았어요. 다시 시도해주세요.",
+            // 첫 저장 시 서버 반영 타이밍 지연으로 state 확인이 실패하는 경우가 있어 1회 재시도 + 짧은 폴링으로 보정
+            let updateRes: Awaited<ReturnType<typeof mentorTodoApi.updateTodo>> | null = null;
+            for (let attempt = 0; attempt < 2; attempt += 1) {
+                try {
+                    updateRes = await mentorTodoApi.updateTodo(Number(todoId), {
+                        title: submission.title ?? "과제",
+                        date: submission.submittedAt,
+                        subject: toApiSubject(submission.subject),
+                        goal: submission.goal ?? "",
+                        state: 2,
                     });
-                    return;
+                    break;
+                } catch (err) {
+                    if (attempt === 1) throw err;
+                    await sleep(250);
                 }
+            }
+
+            let stateDone = updateRes?.data?.state === 2;
+            if (!stateDone) {
+                for (let i = 0; i < 3; i += 1) {
+                    await sleep(250);
+                    const recheck = await mentorTodoApi.getTodo(Number(todoId));
+                    if (recheck.data?.state === 2) {
+                        stateDone = true;
+                        break;
+                    }
+                }
+            }
+            if (!stateDone) {
+                setSaveError({
+                    open: true,
+                    title: "상태 업데이트 실패",
+                    description: "해결 완료 상태로 변경되지 않았어요. 다시 시도해주세요.",
+                });
+                return;
             }
             onSaved?.(submission.id);
             setDirty(false);
