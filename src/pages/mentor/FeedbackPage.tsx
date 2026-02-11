@@ -198,7 +198,6 @@ export default function FeedbackPage() {
     const items = submissions;
     if (items.length === 0) return;
 
-    const totalPages = Math.max(1, Math.ceil(items.length / perPage));
     const start = page * perPage;
     const visible = items.slice(start, start + perPage);
 
