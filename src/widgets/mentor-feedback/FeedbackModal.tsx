@@ -17,6 +17,7 @@ import type { Pin, Submission, ToolMode, PinsByImage } from "@/widgets/mentor-fe
 import { fileApi } from "@/api/file";
 import { mentorTodoApi } from "@/api/mentor/todo";
 import ConfirmModal from "@/shared/ui/modal/ConfirmModal";
+import { menteeNotificationApi } from "@/api/mentee/notification";
 
 type Props = {
     open: boolean;
@@ -51,6 +52,8 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         title: "",
         description: "",
     });
+    //알림
+    const notifiedRef = useRef(false);
 
     // 모바일 COMMENT 바텀시트
     const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
@@ -339,18 +342,18 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         }
 
         // 핀 클릭(선택)
-if (pinEl) {
-  const n = Number(pinEl.getAttribute("data-pin-number"));
-  if (!Number.isFinite(n)) return;
-    setSelectedNumber(n);
-    setEditingNumber(null);
-    setEditingText("");
+        if (pinEl) {
+        const n = Number(pinEl.getAttribute("data-pin-number"));
+        if (!Number.isFinite(n)) return;
+            setSelectedNumber(n);
+            setEditingNumber(null);
+            setEditingText("");
 
-  if (mode === "pin") {
-    requestAnimationFrame(() => setIsMobileSheetOpen(true));
-  }
-  return;
-}
+        if (mode === "pin") {
+            requestAnimationFrame(() => setIsMobileSheetOpen(true));
+        }
+        return;
+        }
         // pin 모드에서 빈 곳 클릭 => 핀 생성
         if (mode !== "pin") return;
 
@@ -421,6 +424,17 @@ if (pinEl) {
                 return;
             }
 
+            const files = submission.files ?? [];
+            if (files.length === 0) {
+                setSaveError({
+                open: true,
+                title: "저장 실패",
+                description: "파일 목록을 불러오지 못했습니다. 다시 열어주세요.",
+                });
+                return;
+            }
+
+            
             const pinsByImagePayload = Array.from({ length: submission.files.length }).map((_, index) => ({
                 imageIndex: index,
                 pins: (pinsSnapshot[index] ?? []).map((p) => ({
@@ -437,12 +451,21 @@ if (pinEl) {
                 overallComment: overallComment ?? "",
                 pinsByImage: pinsByImagePayload,
             };
-
+            //파일별 피드백 저장 API(N번)
+            await Promise.all(
+                files.map((file) =>
+                mentorFeedbackApi.saveFileFeedback(file.id, {
+                    data: JSON.stringify(payload)
+                })
+                )
+            );
             await Promise.all(
                 submission.files.map((file) =>
                     fileApi.postMentorFeedback(file.fileId, { data: JSON.stringify(payload) })
                 )
             );
+            const fileId = submission.files[0].fileId;
+            
             const todoId =
                 (submission as any).todoId ??
                 (submission as any).id;
@@ -483,10 +506,18 @@ if (pinEl) {
                 });
                 return;
             }
+            
+            if (!notifiedRef.current) {
+                notifiedRef.current = true;
+                await menteeNotificationApi.notifyTodoFeedback(submission.todoId);
+            }
+
             onSaved?.(submission.id);
             setDirty(false);
-            setSaved(true);
-        } catch {
+            setSaveSuccessOpen(true);
+        } catch (e) {
+            notifiedRef.current = false;
+
             setSaveError({
                 open: true,
                 title: "저장 실패",
@@ -495,6 +526,11 @@ if (pinEl) {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleClose = () => {
+        notifiedRef.current = false;
+        onClose();
     };
 
     // 코멘트 리스트(우측/시트 공용)
@@ -721,7 +757,8 @@ if (pinEl) {
                             >
                                 <FiChevronLeft className="h-5 w-5 shrink-0 text-gray-700" />
                             </button>
-
+                            
+                            {/* 파일나열 */}
                             <div className="flex min-w-0 flex-1 gap-3 overflow-x-auto pb-2">
                                 {submission.files.map((file, i) => {
                                     const isFilePdf =
