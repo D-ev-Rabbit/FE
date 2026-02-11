@@ -238,7 +238,7 @@ export default function WeeklyView({
                             type="button"
                             onClick={() => onOpenTaskDetail(String(task.id))}
                             className={cn(
-                              "flex items-center gap-2",
+                              "flex items-center gap-2 bg-transparent p-0 text-left",
                               task.done ? "text-gray-400 line-through" : "text-gray-900"
                             )}
                             aria-label={`${task.title} 상세보기`}

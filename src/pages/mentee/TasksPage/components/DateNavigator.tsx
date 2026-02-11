@@ -21,7 +21,7 @@ export default function DateNavigator({ label, onPrev, onNext, onOpen }: DateNav
           <button
             type="button"
             onClick={onOpen}
-            className="min-w-[140px] text-center text-base font-semibold text-gray-900 bg-transparent"
+            className="min-w-[140px] border-0 bg-transparent text-center text-base font-semibold text-gray-900 outline-none ring-0 shadow-none hover:border-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
             aria-label="날짜 선택"
           >
             {label}
