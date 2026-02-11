@@ -218,13 +218,15 @@ export default function ActivitySummaryContent() {
     return `${Math.max(0, Math.min(100, pct))}%`;
   };
 
-  const subjectOrder = ["국어", "영어", "수학"];
+  const subjectOrder = ["국어", "영어", "수학"] as const;
   const subjectLabel = (name: string) => {
     if (name === "KOREAN") return "국어";
     if (name === "ENGLISH") return "영어";
     if (name === "MATH") return "수학";
     return name;
   };
+  const subjectKeyByLabel = (label: (typeof subjectOrder)[number]) =>
+    label === "국어" ? "KOREAN" : label === "영어" ? "ENGLISH" : "MATH";
 
   const displayToDate = useMemo(() => {
     if (!summary?.to) return null;
@@ -241,23 +243,24 @@ export default function ActivitySummaryContent() {
 
   const subjectEntries = useMemo(() => {
     const subjects = summary?.subjects ?? {};
-    const normalized = Object.entries(subjects).reduce<Record<string, MenteeSummarySubject>>(
-      (acc, [key, value]) => {
-        const name = subjectLabel(key);
-        if (!acc[name]) acc[name] = value as MenteeSummarySubject;
-        return acc;
-      },
-      {}
-    );
-
-    const entries = Object.entries(normalized);
-    if (entries.length === 0) {
+    if (Object.keys(subjects).length === 0) {
       return subjectOrder.map((name) => [name, null] as const);
     }
-    const ordered = subjectOrder
-      .filter((name) => normalized[name])
-      .map((name) => [name, normalized[name]] as const);
-    const rest = entries.filter(([name]) => !subjectOrder.includes(name));
+
+    const ordered = subjectOrder.map((name) => {
+      const raw = subjects[subjectKeyByLabel(name)] ?? subjects[name];
+      return [name, (raw as MenteeSummarySubject | undefined) ?? null] as const;
+    });
+
+    const rest = Object.entries(subjects)
+      .filter(([key]) => {
+        const label = subjectLabel(key);
+        const keyUpper = key.toUpperCase();
+        if (subjectOrder.includes(label as (typeof subjectOrder)[number])) return false;
+        if (keyUpper === "KOREAN" || keyUpper === "ENGLISH" || keyUpper === "MATH") return false;
+        return true;
+      })
+      .map(([key, value]) => [subjectLabel(key), value as MenteeSummarySubject | null] as const);
     return [...ordered, ...rest];
   }, [summary]);
 
@@ -314,22 +317,7 @@ export default function ActivitySummaryContent() {
   const goPrev = () => setIndex((i) => clamp(i - 1));
   const goNext = () => setIndex((i) => clamp(i + 1));
 
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const [viewportW, setViewportW] = useState(0);
-
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-
-    const update = () => setViewportW(el.clientWidth);
-    update();
-
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const SWIPE_THRESHOLD = Math.max(60, viewportW * 0.2);
+  const SWIPE_THRESHOLD = 60;
 
   if (loading) {
     return (
@@ -389,7 +377,7 @@ export default function ActivitySummaryContent() {
           </div>
         </div>
 
-        <div ref={viewportRef} className="overflow-hidden">
+        <div className="overflow-hidden">
           <motion.div
             className="relative"
             drag="x"
@@ -404,14 +392,13 @@ export default function ActivitySummaryContent() {
           >
             <motion.div
               className="flex"
-              animate={{ x: -(index * viewportW) }}
+              animate={{ x: `${-(index * 100)}%` }}
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
             >
               {cards.map((card) => (
                 <div
                   key={card.key}
-                  className="shrink-0 px-4 pb-6 pt-6"
-                  style={{ width: viewportW || "100%" }}
+                  className="shrink-0 basis-full px-4 pb-6 pt-6"
                 >
                   <div className="space-y-6">
                     {card.metrics.map((m) => (

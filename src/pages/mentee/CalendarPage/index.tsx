@@ -102,7 +102,6 @@ export default function MenteeCalendarPage() {
     goToNextMonth,
     selectDateFromMonth,
     openTaskActions,
-    toggleTaskDone,
     openTaskEdit,
     openTaskDate,
     goToPrevWeek,
@@ -289,6 +288,14 @@ export default function MenteeCalendarPage() {
     // 현재 todo 찾기
     const found = todos.find((t) => t.id === todoId);
     if (!found) return;
+    if (found.isMine === false) {
+      setErrorModal({
+        open: true,
+        title: "완료 처리 불가",
+        description: "멘토 과제는 과제 탭에서 제출해야 완료 상태로 반영돼요.",
+      });
+      return;
+    }
 
     const nextState =
       found.state === 2 ? 2 : found.state === 0 ? 1 : 0;
@@ -588,7 +595,7 @@ export default function MenteeCalendarPage() {
           onSelectDate={selectDateFromMonth}
           onToggleSubject={toggleSubject}
           onAddTask={openAddTask}
-          onToggleTaskDone={toggleTaskDone}
+          onToggleTaskDone={handleToggleTodoDone}
           onOpenTaskActions={openTaskActions}
           onOpenTaskDetail={openTaskDetail}
           onGoDaily={() => {

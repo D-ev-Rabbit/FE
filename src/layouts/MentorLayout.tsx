@@ -76,7 +76,7 @@ export default function MentorLayout() {
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(true)}
-                  className="rounded-full p-2 hover:bg-gray-100 lg:hidden"
+                  className="rounded-full p-2 mb-4 hover:bg-gray-100 lg:hidden"
                   aria-label="사이드바 열기"
                 >
                   <FiMenu />

@@ -46,7 +46,7 @@ export default function FeedbackPage() {
       rawMentees.map((m) => ({
         key: String(m.id),
         menteeName: m.name,
-        gradeLabel: `고등학교 ${m.grade}학년`,
+        gradeLabel: `${m.grade}학년`,
         schoolLabel: m.school,
       })),
     [rawMentees]
@@ -198,7 +198,6 @@ export default function FeedbackPage() {
     const items = submissions;
     if (items.length === 0) return;
 
-    const totalPages = Math.max(1, Math.ceil(items.length / perPage));
     const start = page * perPage;
     const visible = items.slice(start, start + perPage);
 
@@ -212,9 +211,16 @@ export default function FeedbackPage() {
           try {
             const filesRes = await fileApi.getMentorTodoFiles(Number(s.id));
             const files = filesRes.data ?? [];
-            const first = files.find((f) => !String(f.type ?? "").toLowerCase().includes("pdf")) ?? files[0];
+            const isPdf = (f: { type?: string; name?: string; url?: string }) => {
+              const type = String(f.type ?? "").toLowerCase();
+              const name = String(f.name ?? "").toLowerCase();
+              const url = String(f.url ?? "").toLowerCase();
+              return type.includes("pdf") || name.endsWith(".pdf") || url.includes(".pdf");
+            };
+            const first = files.find((f) => !isPdf(f)) ?? files[0];
             if (!first?.url) return;
-            const blob = await fileApi.fetchFileBlob(first.url);
+            const blob = await fileApi.fetchFileBlob(first.url, first.id);
+            if (!blob.type.startsWith("image/")) return;
             if (cancelled) return;
             const blobUrl = URL.createObjectURL(blob);
             previewLoadedRef.current.add(s.id);
@@ -341,13 +347,13 @@ export default function FeedbackPage() {
 
           return (
             <>
-              <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                  <div className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100">
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100">
                       <FaRegCalendar />
                     </span>
-                    <span>
+                    <span className="min-w-0 flex-1 truncate">
                       {selectedDate.toLocaleDateString("ko-KR", {
                         weekday: "long",
                         year: "numeric",
@@ -358,44 +364,50 @@ export default function FeedbackPage() {
                     <button
                       type="button"
                       onClick={() => setCalendarOpen((prev) => !prev)}
-                      className="ml-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50"
+                      className="ml-1 shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50"
                     >
                       날짜 선택
                     </button>
                   </div>
+                </div>
 
-                  <SubjectFilter value={subjectFilter} onChange={setSubjectFilter} />
-                  <div className="hidden items-center justify-center lg:flex">
+                <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center">
+                  <div className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <SubjectFilter value={subjectFilter} onChange={setSubjectFilter} className="w-max gap-2" />
+                  </div>
+                  <div className="hidden items-center justify-center px-1 lg:flex">
                     <span className="text-gray-300">|</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {[
-                      { key: "ALL", label: "전체" },
-                      { key: "COMPLETED", label: "피드백 완료" },
-                      { key: "INCOMPLETE", label: "피드백 대기" },
-                      { key: "TODO_INCOMPLETE", label: "과제 미완료" },
-                    ].map((item) => {
-                      const active = statusFilter === item.key;
-                      return (
-                        <button
-                          key={item.key}
-                          type="button"
-                          onClick={() => setStatusFilter(item.key as any)}
-                          className={cn(
-                            "inline-flex items-center justify-center whitespace-nowrap",
-                            "h-7 px-5 rounded-full border",
-                            "text-sm font-semibold leading-none",
-                            "min-w-[64px]",
-                            "transition-colors",
-                            active
-                              ? "border-violet-600 bg-violet-50 text-violet-700"
-                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                          )}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
+                  <div className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex w-max items-center gap-2">
+                      {[
+                        { key: "ALL", label: "전체" },
+                        { key: "COMPLETED", label: "피드백 완료" },
+                        { key: "INCOMPLETE", label: "피드백 대기" },
+                        { key: "TODO_INCOMPLETE", label: "과제 미완료" },
+                      ].map((item) => {
+                        const active = statusFilter === item.key;
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setStatusFilter(item.key as any)}
+                            className={cn(
+                              "inline-flex items-center justify-center whitespace-nowrap",
+                              "h-7 px-5 rounded-full border",
+                              "text-sm font-semibold leading-none",
+                              "min-w-[64px]",
+                              "transition-colors",
+                              active
+                                ? "border-violet-600 bg-violet-50 text-violet-700"
+                                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -523,6 +535,13 @@ export default function FeedbackPage() {
                                 <img
                                   src={previewUrls[s.id]}
                                   alt=""
+                                  onError={() =>
+                                    setPreviewUrls((prev) => {
+                                      const next = { ...prev };
+                                      delete next[s.id];
+                                      return next;
+                                    })
+                                  }
                                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                                 />
                               ) : (
