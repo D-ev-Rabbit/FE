@@ -506,6 +506,7 @@ export default function FeedbackPage() {
                                     .filter((f: any) => Boolean(f.url) && Boolean(f.fileId));
                                   setSelectedSubmission({
                                     ...s,
+                                    todoId: Number(s.id),
                                     subject: toSubject(detail?.subject ?? s.subject),
                                     submittedAt: detail?.date ?? s.submittedAt,
                                     title: detail?.title ?? s.title,
@@ -515,7 +516,7 @@ export default function FeedbackPage() {
                                   });
                                 })
                                 .catch(() => {
-                                  setSelectedSubmission(s);
+                                  setSelectedSubmission({ ...s, todoId: Number(s.id) });
                                 });
                             }}
                             className={cn(
