@@ -600,13 +600,12 @@ export default function DailyRecordPage({
     const ns = toTimelineMinutes(newStart);
     const ne = toTimelineMinutes(newEnd);
     const isWrapped = ne <= ns;
-    const nextDateKey = addDaysToDateKey(dateKey, 1);
-    const nextRecords = recordsByDate[nextDateKey] ?? [];
+    if (isWrapped) {
+      setManualError("하루 기록은 오전 5시부터 다음날 오전 5시까지입니다.");
+      return;
+    }
     const hasOverlap =
-      (!isWrapped && hasOverlapInRecords(records, ns, ne)) ||
-      (isWrapped &&
-        (hasOverlapInRecords(records, ns, 1440) ||
-          hasOverlapInRecords(nextRecords, 0, ne)));
+      hasOverlapInRecords(records, ns, ne);
     if (hasOverlap) {
       setManualError("해당 시간대에 이미 기록이 있어요");
       return;
@@ -621,12 +620,7 @@ export default function DailyRecordPage({
         endAt: formatLocalDateTime(addMinutesToDate(base, endMinutes)),
       });
 
-    const requests = isWrapped
-      ? [
-        createManual(ns, 1440, baseDate),
-        createManual(0, ne, addMinutesToDate(baseDate, 1440)),
-      ]
-      : [createManual(ns, ne, baseDate)];
+    const requests = [createManual(ns, ne, baseDate)];
 
     Promise.all(requests)
       .then((responses) => {
