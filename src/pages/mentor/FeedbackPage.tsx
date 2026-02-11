@@ -211,9 +211,16 @@ export default function FeedbackPage() {
           try {
             const filesRes = await fileApi.getMentorTodoFiles(Number(s.id));
             const files = filesRes.data ?? [];
-            const first = files.find((f) => !String(f.type ?? "").toLowerCase().includes("pdf")) ?? files[0];
+            const isPdf = (f: { type?: string; name?: string; url?: string }) => {
+              const type = String(f.type ?? "").toLowerCase();
+              const name = String(f.name ?? "").toLowerCase();
+              const url = String(f.url ?? "").toLowerCase();
+              return type.includes("pdf") || name.endsWith(".pdf") || url.includes(".pdf");
+            };
+            const first = files.find((f) => !isPdf(f)) ?? files[0];
             if (!first?.url) return;
             const blob = await fileApi.fetchFileBlob(first.url, first.id);
+            if (!blob.type.startsWith("image/")) return;
             if (cancelled) return;
             const blobUrl = URL.createObjectURL(blob);
             previewLoadedRef.current.add(s.id);
@@ -528,6 +535,13 @@ export default function FeedbackPage() {
                                 <img
                                   src={previewUrls[s.id]}
                                   alt=""
+                                  onError={() =>
+                                    setPreviewUrls((prev) => {
+                                      const next = { ...prev };
+                                      delete next[s.id];
+                                      return next;
+                                    })
+                                  }
                                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                                 />
                               ) : (
