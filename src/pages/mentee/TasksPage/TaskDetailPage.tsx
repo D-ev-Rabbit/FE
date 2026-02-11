@@ -124,7 +124,7 @@ export default function MenteeTaskDetailPage() {
     let revoked = false;
     uploadsForGrid.forEach((u) => {
       fileApi
-        .fetchFileBlob(u.url)
+        .fetchFileBlob(u.url, u.id)
         .then((blob) => {
           if (revoked) return;
           const blobUrl = URL.createObjectURL(blob);
@@ -310,7 +310,7 @@ export default function MenteeTaskDetailPage() {
     const url = normalizeFileUrl(first.url ?? "");
     if (!url) return;
     fileApi
-      .fetchFileBlob(url)
+      .fetchFileBlob(url, first.fileId)
       .then((blob) => {
         const u = URL.createObjectURL(blob);
         const a = document.createElement("a");

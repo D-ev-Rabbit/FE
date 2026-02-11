@@ -213,7 +213,7 @@ export default function FeedbackPage() {
             const files = filesRes.data ?? [];
             const first = files.find((f) => !String(f.type ?? "").toLowerCase().includes("pdf")) ?? files[0];
             if (!first?.url) return;
-            const blob = await fileApi.fetchFileBlob(first.url);
+            const blob = await fileApi.fetchFileBlob(first.url, first.id);
             if (cancelled) return;
             const blobUrl = URL.createObjectURL(blob);
             previewLoadedRef.current.add(s.id);
