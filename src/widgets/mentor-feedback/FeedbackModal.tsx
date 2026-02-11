@@ -453,29 +453,30 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
             };
             //파일별 피드백 저장 API(N번)
             await Promise.all(
-                files.map((file) =>
-                mentorFeedbackApi.saveFileFeedback(file.id, {
-                    data: JSON.stringify(payload)
-                })
-                )
-            );
-            await Promise.all(
                 submission.files.map((file) =>
                     fileApi.postMentorFeedback(file.fileId, { data: JSON.stringify(payload) })
                 )
             );
+
+
             const fileId = submission.files[0].fileId;
             
-            const todoId =
-                (submission as any).todoId ??
-                (submission as any).id;
+            const todoId = submission.todoId;
+            if (!Number.isFinite(todoId)) {
+            setSaveError({
+                open: true,
+                title: "저장 실패",
+                description: "todoId가 없어 상태 변경/알림을 보낼 수 없어요. (데이터 바인딩 확인 필요)",
+            });
+            return;
+            }
             // 첫 저장 시 서버 반영 타이밍 지연으로 state 확인이 실패하는 경우가 있어 1회 재시도 + 짧은 폴링으로 보정
             let updateRes: Awaited<ReturnType<typeof mentorTodoApi.updateTodo>> | null = null;
             for (let attempt = 0; attempt < 2; attempt += 1) {
                 try {
                     updateRes = await mentorTodoApi.updateTodo(Number(todoId), {
                         title: submission.title ?? "과제",
-                        date: submission.submittedAt,
+                        date: (submission.submittedAt ?? "").slice(0, 10),
                         subject: toApiSubject(submission.subject),
                         goal: submission.goal ?? "",
                         state: 2,
@@ -507,14 +508,11 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
                 return;
             }
             
-            if (!notifiedRef.current) {
-                notifiedRef.current = true;
-                await menteeNotificationApi.notifyTodoFeedback(submission.todoId);
-            }
+            await menteeNotificationApi.notifyTodoFeedback(Number(todoId));
 
             onSaved?.(submission.id);
             setDirty(false);
-            setSaveSuccessOpen(true);
+            setSaved(true);
         } catch (e) {
             notifiedRef.current = false;
 

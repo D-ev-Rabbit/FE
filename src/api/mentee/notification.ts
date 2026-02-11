@@ -19,11 +19,6 @@ export const menteeNotificationApi = {
     );
   },
 
-  // notifyFileFeedback(fileId: number) {
-  //   return axiosInstance.post(
-  //     `/api/mentor/notifications/feedback/${fileId}`
-  //   );
-  // }
 
   notifyTodoFeedback(todoId: number) {
     return axiosInstance.post(`/api/mentor/notifications/feedback/todo/${todoId}`);
