@@ -169,6 +169,7 @@ export default function FeedbackPage() {
         if (ignore) return;
         const items = (res.data ?? []).map((t: MentorTodo) => ({
           id: String(t.id),
+          todoId: Number(t.id),
           menteeName: selectedMentee.menteeName,
           gradeLabel: selectedMentee.gradeLabel,
           submittedAt: t.date,

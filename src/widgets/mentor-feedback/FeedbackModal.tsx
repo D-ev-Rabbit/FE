@@ -457,9 +457,6 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
                     fileApi.postMentorFeedback(file.fileId, { data: JSON.stringify(payload) })
                 )
             );
-
-
-            const fileId = submission.files[0].fileId;
             
             const todoId = submission.todoId;
             if (!Number.isFinite(todoId)) {
