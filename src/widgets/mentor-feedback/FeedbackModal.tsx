@@ -523,11 +523,6 @@ export default function FeedbackModal({ open, onClose, submission, onSaved }: Pr
         }
     };
 
-    const handleClose = () => {
-        notifiedRef.current = false;
-        onClose();
-    };
-
     // 코멘트 리스트(우측/시트 공용)
     const CommentPanel = (
         <div className="flex h-full w-full flex-col overflow-hidden p-4">
