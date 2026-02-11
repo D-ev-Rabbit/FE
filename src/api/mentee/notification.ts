@@ -18,4 +18,14 @@ export const menteeNotificationApi = {
       `/api/mentee/notifications/${notificationId}/read`
     );
   },
+
+  // notifyFileFeedback(fileId: number) {
+  //   return axiosInstance.post(
+  //     `/api/mentor/notifications/feedback/${fileId}`
+  //   );
+  // }
+
+  notifyTodoFeedback(todoId: number) {
+    return axiosInstance.post(`/api/mentor/notifications/feedback/todo/${todoId}`);
+  },
 };
