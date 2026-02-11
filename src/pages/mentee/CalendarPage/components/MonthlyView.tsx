@@ -11,6 +11,7 @@ import {
 import type { MonthCell, MonthGoal, SubjectGroup, Task } from "../types/calendar";
 import { dayLabels } from "../utils/date";
 import { parseStudyMinutes } from "../utils/time";
+import { cn } from "@/shared/lib/cn";
 
 const SUBJECT_BADGE_STYLES: Record<
   string,
@@ -274,12 +275,18 @@ export default function MonthlyView({
                           <button
                             type="button"
                             onClick={() => onOpenTaskDetail(String(task.id))}
-                            className={
+                            className={cn(
+                              "flex items-center gap-2 bg-transparent p-0 text-left",
                               task.done ? "text-gray-400 line-through" : "text-gray-900"
-                            }
+                            )}
                             aria-label={`${task.title} 상세보기`}
                           >
                             {task.title}
+                            {task.isMine === false && (
+                              <span className="rounded-full bg-amber-100 px-1.5 py-0 text-[9px] font-semibold text-amber-700">
+                                멘토
+                              </span>
+                            )}
                           </button>
                         </div>
                         {task.isMine !== false && (

@@ -190,6 +190,15 @@ export default function MenteeTaskDetailPage() {
 
   const handleUpload = () => {
     if (!selectedFile) return;
+    if (!selectedFile.type.startsWith("image/")) {
+      setUploadResult({
+        open: true,
+        variant: "error",
+        title: "업로드 실패",
+        description: "사진 파일(JPG, PNG 등)만 업로드할 수 있어요.",
+      });
+      return;
+    }
     const tempUrl = URL.createObjectURL(selectedFile);
     setPendingUploads((prev) => [
       ...prev,
@@ -211,6 +220,19 @@ export default function MenteeTaskDetailPage() {
 
   const handleSaveTask = async () => {
     if (!task) return;
+    const hasUploadedImage = uploadsForGrid.length > 0;
+    const hasPendingImage = pendingUploads.some((upload) =>
+      upload.file.type.startsWith("image/")
+    );
+    if (!hasUploadedImage && !hasPendingImage) {
+      setUploadResult({
+        open: true,
+        variant: "error",
+        title: "저장 불가",
+        description: "사진을 1장 이상 업로드해야 저장할 수 있어요.",
+      });
+      return;
+    }
     setIsSavingTask(true);
     try {
       let nextUploads = uploads;
